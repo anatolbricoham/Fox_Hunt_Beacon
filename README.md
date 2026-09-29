@@ -1,7 +1,7 @@
 # 9M2PJU ESP32 Fox Hunt Beacon
 
 <p align="center">
-  <img src="images/fox-beacon-logo.png" alt="9M2PJU ESP32 Fox Hunt Beacon" width="600">
+  <img src="images/bricohams_horizontal.png" alt="9M2PJU ESP32 Fox Hunt Beacon" width="600">
 </p>
 
 ESP32 firmware for an amateur radio fox hunting beacon using cheap handheld
