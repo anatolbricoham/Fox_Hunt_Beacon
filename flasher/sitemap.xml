@@ -6,7 +6,7 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://fox.hamradio.my/bricohams-logo.svg</image:loc>
+      <image:loc>https://fox.hamradio.my/bricohams_horizontal.png</image:loc>
       <image:title>BricoHams amateur radio and DIY logo</image:title>
       <image:caption>ESP32 firmware for amateur radio fox hunting with browser-based web flasher</image:caption>
     </image:image>

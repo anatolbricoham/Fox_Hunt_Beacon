@@ -1,7 +1,7 @@
 # BricoHams ESP32 Fox Hunt Beacon
 
 <p align="center">
-  <img src="flasher/bricohams-logo.svg" alt="BricoHams amateur radio and DIY logo" width="600">
+  <img src="images/bricohams_horizontal.png" alt="BricoHams amateur radio and DIY logo" width="600">
 </p>
 
 ESP32 firmware for an amateur radio fox hunting beacon using cheap handheld
