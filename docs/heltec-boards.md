@@ -75,15 +75,30 @@ Wireless Tracker (ESP32-S3) uses different pins due to TFT + GPS:
 | Test button | 0 |
 | Battery ADC | 1 |
 
-Vision Master series and Capsule Sensor V3 (ESP32-S3):
+Vision Master display boards (ESP32-S3):
 
 | Function | GPIO |
 | --- | ---: |
-| PTT output | 4 |
-| Audio output | 3 |
-| Status LED | 18 |
+| PTT output | 15 |
+| Audio output | 16 |
 | Test button | 0 |
-| Battery ADC | 6 |
+
+Vision Master T190 (TFT) and Wireless Paper (E-Ink):
+
+| Function | GPIO |
+| --- | ---: |
+| Status LED | 18 |
+| Battery ADC | 6 (T190), 1 (Wireless Paper) |
+
+Vision Master E213 and E290 (E-Ink):
+
+| Function | GPIO |
+| --- | ---: |
+| Status LED | 45 |
+| Battery ADC | 7 |
+
+Capsule Sensor V3 (no display) retains the starter mapping PTT 4, audio 3,
+status LED 18, button 0, and battery ADC 6.
 
 These are starter mappings for firmware builds and bench testing. Before wiring
 a radio, compare the pins with the exact board revision, silkscreen, schematic,

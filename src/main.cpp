@@ -98,7 +98,7 @@ void menuToggle(int idx) {
     case MENU_WIFI_AP:
       config.wifiApEnabled = !config.wifiApEnabled;
       if (config.wifiApEnabled) {
-        webAdminInit("9M2PJU-Fox");
+        webAdminInit("BricoHams-Fox");
       } else {
         webAdminStop();
       }
@@ -248,6 +248,16 @@ uint32_t resolvedStartupDelaySeconds() {
     return config.startupDelaySeconds;
   }
   return static_cast<uint32_t>(foxNumber - 1) * config.transmitSeconds;
+}
+
+BeaconState stateAfterStartup() {
+  if (config.beaconMode) {
+    return BeaconState::ContinuousTransmit;
+  }
+  if (config.foxSyncEnabled && foxNumberFromId(config.foxId) != 0) {
+    return BeaconState::Transmitting;
+  }
+  return BeaconState::Idle;
 }
 
 uint32_t elapsedSince(uint32_t startedAt) {
@@ -408,6 +418,13 @@ void sendMorseText(const String &text) {
   }
 }
 
+void sendBeaconId() {
+  sendMorseText(config.callSign);
+  keyedDelay(500);
+  sendMorseText(config.foxId);
+  keyedDelay(500);
+}
+
 void sendWarbleUntil(uint32_t untilMs) {
   bool high = false;
   while (static_cast<int32_t>(untilMs - millis()) > 0) {
@@ -556,7 +573,7 @@ void printConfig() {
   Serial.println(F("  ptt_test"));
   Serial.println(F("  defaults"));
   Serial.println(F("  reboot"));
-  Serial.println(F("  set call 9M2PJU"));
+  Serial.println(F("  set call EA5KAO"));
   Serial.println(F("  set fox MOE"));
   Serial.println(F("  set mode fox|beacon"));
   Serial.println(F("  set fox_sync on|off"));
@@ -590,23 +607,28 @@ void enterState(BeaconState nextState) {
 
 void transmitBeacon() {
   Serial.println(F("TX start"));
+  const uint32_t transmissionEndsAt = millis() + (config.transmitSeconds * 1000UL);
+  const uint32_t audioEndsAt = transmissionEndsAt - config.pttTailMs;
   setLed(true);
   setPtt(true);
   keyedDelay(config.pttLeadMs);
 
-  const uint32_t transmissionEndsAt = millis() + (config.transmitSeconds * 1000UL);
-  sendMorseText(config.callSign);
-  keyedDelay(500);
-  sendMorseText(config.foxId);
-  keyedDelay(500);
+  sendBeaconId();
 
-  if (config.warbleEnabled && static_cast<int32_t>(transmissionEndsAt - millis()) > 0) {
-    sendWarbleUntil(transmissionEndsAt);
+  const int32_t remainingAudioMs = static_cast<int32_t>(audioEndsAt - millis());
+  if (remainingAudioMs > 0 && config.warbleEnabled) {
+    sendWarbleUntil(audioEndsAt);
   } else {
     audioOff();
+    if (remainingAudioMs > 0) {
+      keyedDelay(static_cast<uint32_t>(remainingAudioMs));
+    }
   }
 
-  keyedDelay(config.pttTailMs);
+  const int32_t remainingPttMs = static_cast<int32_t>(transmissionEndsAt - millis());
+  if (remainingPttMs > 0) {
+    keyedDelay(static_cast<uint32_t>(remainingPttMs));
+  }
   audioOff();
   setPtt(false);
   setLed(false);
@@ -614,6 +636,7 @@ void transmitBeacon() {
 }
 
 void readSerialCommands();
+void checkButton();
 
 void runContinuousBeacon() {
   Serial.println(F("Continuous beacon start"));
@@ -621,22 +644,29 @@ void runContinuousBeacon() {
   setPtt(true);
   keyedDelay(config.pttLeadMs);
 
-  while (state == BeaconState::ContinuousTransmit) {
+  while (state == BeaconState::ContinuousTransmit && config.beaconMode) {
+    const uint32_t nextIdAt = millis() + (config.beaconIdIntervalSeconds * 1000UL);
     audioOff();
-    sendMorseText(config.callSign);
-    keyedDelay(500);
-    sendMorseText(config.foxId);
-    keyedDelay(500);
+    sendBeaconId();
     audioOff();
 
-    const uint32_t carrierUntil = millis() + (config.beaconIdIntervalSeconds * 1000UL);
-    while (static_cast<int32_t>(carrierUntil - millis()) > 0) {
+    while (state == BeaconState::ContinuousTransmit && config.beaconMode &&
+           static_cast<int32_t>(nextIdAt - millis()) > 0) {
       if (isLowBattery()) {
         break;
       }
+      checkButton();
       blinkLed(LED_TX_BLINK_MS);
       readSerialCommands();
       webAdminLoop();
+      updateDisplay();
+      if (forceTransmit) {
+        forceTransmit = false;
+        Serial.println(F("Beacon ID retransmission."));
+        audioOff();
+        sendBeaconId();
+        audioOff();
+      }
       delay(10);
     }
     if (isLowBattery()) {
@@ -648,17 +678,22 @@ void runContinuousBeacon() {
   audioOff();
   setPtt(false);
   setLed(false);
+  if (state == BeaconState::ContinuousTransmit && !config.beaconMode) {
+    enterState(BeaconState::Idle);
+  }
   Serial.println(F("Continuous beacon end"));
 }
 
 void testPttOnly() {
   Serial.println(F("PTT test start"));
+  const bool restorePtt = state == BeaconState::Transmitting ||
+                          state == BeaconState::ContinuousTransmit;
   audioOff();
   setPtt(true);
   setLed(true);
   keyedDelay(PTT_TEST_MS);
-  setPtt(false);
-  setLed(false);
+  setPtt(restorePtt);
+  setLed(restorePtt);
   Serial.println(F("PTT test end"));
 }
 
@@ -757,7 +792,7 @@ void handleSetCommand(String key, String value) {
     }
     config.wifiApEnabled = parsed;
     if (parsed && !webAdminIsRunning()) {
-      webAdminInit("9M2PJU-Fox");
+      webAdminInit("BricoHams-Fox");
     } else if (!parsed && webAdminIsRunning()) {
       webAdminStop();
     }
@@ -910,20 +945,25 @@ void setup() {
   }
 
   if (config.wifiApEnabled) {
-    webAdminInit("9M2PJU-Fox");
+    webAdminInit("BricoHams-Fox");
   }
 
   printConfig();
   Serial.println(F("Beacon armed."));
   const uint32_t startupDelay = resolvedStartupDelaySeconds();
   enterState(startupDelay > 0 ? BeaconState::StartupDelay
-                               : (config.beaconMode ? BeaconState::ContinuousTransmit : BeaconState::Idle));
+                               : stateAfterStartup());
 }
 
 void loop() {
   readSerialCommands();
   checkButton();
   webAdminLoop();
+
+    if (config.beaconMode && state != BeaconState::StartupDelay &&
+      state != BeaconState::ContinuousTransmit && state != BeaconState::LowBatteryHalt) {
+    enterState(BeaconState::ContinuousTransmit);
+  }
 
   if (state != BeaconState::LowBatteryHalt && isLowBattery()) {
     Serial.printf("Low battery halt: %.2f V\n", readBatteryVoltage());
@@ -943,7 +983,7 @@ void loop() {
       blinkLed(LED_IDLE_BLINK_MS);
       const uint32_t startupDelay = resolvedStartupDelaySeconds();
       if (elapsedSince(stateStartedAt) >= startupDelay * 1000UL) {
-        enterState(config.beaconMode ? BeaconState::ContinuousTransmit : BeaconState::Idle);
+        enterState(stateAfterStartup());
       }
       break;
     }

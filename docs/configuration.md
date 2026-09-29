@@ -19,7 +19,7 @@ monitor.
 ## Web Admin UI
 
 The beacon hosts a WiFi access point with a captive portal. On boot, look for a
-WiFi network named `9M2PJU-Fox-XXXX` (last 4 hex of MAC address). Connect to it
+WiFi network named `BricoHams-Fox-XXXX` (last 4 hex of MAC address). Connect to it
 from a phone or laptop — the configuration page should auto-open. If it does
 not, browse to `http://10.0.0.8/`.
 
@@ -48,7 +48,7 @@ For a standard IARU 5-fox event, the defaults already match the standard cycle
 callsign and fox ID on each beacon:
 
 ```text
-set call 9M2PJU
+set call EA5KAO
 set fox MOE
 ```
 
@@ -89,7 +89,7 @@ CALLSIGN in CW -> FOX_ID in CW -> steady carrier (or warble if enabled)
 With the default settings, the radio sends:
 
 ```text
-9M2PJU MOE
+EA5KAO MOE
 ```
 
 Then it holds a steady carrier until the transmit timer ends. If warble is
@@ -102,7 +102,7 @@ command to return to your preferred setup.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
-| `DEFAULT_CALLSIGN` | Callsign sent in CW. | `9M2PJU` |
+| `DEFAULT_CALLSIGN` | Callsign sent in CW. | `EA5KAO` |
 | `DEFAULT_FOX_ID` | ARDF fox identifier sent after the callsign. | `MOE` |
 | `DEFAULT_STARTUP_DELAY_SECONDS` | Delay after power-on before the schedule starts. Overridden by fox sync when enabled. | `10` |
 | `DEFAULT_TRANSMIT_SECONDS` | Length of each transmit window. | `60` |

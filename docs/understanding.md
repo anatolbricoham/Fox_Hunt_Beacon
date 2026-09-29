@@ -26,10 +26,10 @@ During the transmit window, the firmware:
 The default on-air message is:
 
 ```text
-9M2PJU MOE
+EA5KAO MOE
 ```
 
-`9M2PJU` is the station callsign. `MOE` is the ARDF Fox 1 identifier.
+`EA5KAO` is the example station callsign. `MOE` is the ARDF Fox 1 identifier.
 
 ## What ARDF Means
 
@@ -183,7 +183,7 @@ The beacon supports three configuration methods:
 1. **Compile-time**: Edit `include/beacon_config.h` before building.
 2. **Serial Monitor**: USB commands at 115200 baud after flashing.
 3. **Web Admin UI**: WiFi AP with captive portal — connect from a phone or
-   laptop to `9M2PJU-Fox-XXXX` and browse to `http://10.0.0.8/`. The AP
+  laptop to `BricoHams-Fox-XXXX` and browse to `http://10.0.0.8/`. The AP
    auto-offs after a configurable timeout (default 10 min) of no activity to
    save power. The web server uses ESPAsyncWebServer for non-blocking request
    handling, and web assets (HTML/CSS/JS) are gzip-compressed at build time and

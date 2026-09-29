@@ -55,7 +55,7 @@ left activity bar.
 ### 2. Open This Firmware Project
 
 1. In VS Code, choose `File > Open Folder`.
-2. Select the `9M2PJU-ESP32-Fox-Hunt-Beacon` repository folder.
+2. Select the BricoHams `Fox_Hunt_Beacon` repository folder.
 3. Wait for PlatformIO to load the project.
 4. Confirm that `platformio.ini` appears in the file explorer.
 
@@ -113,7 +113,7 @@ ttgo-t7-v14-mini32
 Open `include/beacon_config.h` and check these values before building:
 
 ```c
-#define DEFAULT_CALLSIGN "9M2PJU"
+#define DEFAULT_CALLSIGN "EA5KAO"
 #define DEFAULT_FOX_ID "MOE"
 #define DEFAULT_STARTUP_DELAY_SECONDS 10
 #define DEFAULT_TRANSMIT_SECONDS 60
@@ -169,7 +169,7 @@ You can change settings in two ways without rebuilding:
 **Serial Monitor** (USB cable required):
 
 ```text
-set call 9M2PJU
+set call EA5KAO
 set fox MOE
 set tx 60
 set idle 240
@@ -179,7 +179,7 @@ show
 
 **Web Admin UI** (no cable needed after first upload):
 
-After boot, look for a WiFi network named `9M2PJU-Fox-XXXX` on your phone or
+After boot, look for a WiFi network named `BricoHams-Fox-XXXX` on your phone or
 laptop. Connect to it and browse to `http://10.0.0.8/` if the captive portal
 does not auto-open. The web UI has forms for all settings and buttons for test,
 PTT test, defaults, and reboot.
@@ -250,7 +250,7 @@ contain your default callsign, fox ID, timing, pins, and battery settings.
 Minimum values to check:
 
 ```c
-#define DEFAULT_CALLSIGN "9M2PJU"
+#define DEFAULT_CALLSIGN "EA5KAO"
 #define DEFAULT_FOX_ID "MOE"
 #define DEFAULT_TRANSMIT_SECONDS 60
 #define DEFAULT_IDLE_SECONDS 240

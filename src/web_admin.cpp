@@ -232,7 +232,7 @@ void webAdminInit(const char *apNamePrefix) {
 
   running = true;
   lastActivityMs = millis();
-  Serial.printf("9M2PJU Fox Hunt Beacon — Web admin AP: %s, IP: %s\n", apSsid.c_str(), apIp.c_str());
+  Serial.printf("BricoHams Fox Hunt Beacon — Web admin AP: %s, IP: %s\n", apSsid.c_str(), apIp.c_str());
 }
 
 void webAdminLoop() {

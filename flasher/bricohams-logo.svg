@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">BricoHams</title>
+  <desc id="desc">BricoHams amateur radio and do-it-yourself logo</desc>
+  <g fill="none" stroke="#25292b" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M64 126h83a40 40 0 0 1 0 80H64v38h83a43 43 0 0 1 0 86H64z" fill="#25292b"/>
+    <path d="M64 226h141M257 226h143"/>
+    <path d="M296 129v216M399 129v216"/>
+  </g>
+  <g fill="#fff" stroke="#25292b" stroke-width="13">
+    <circle cx="106" cy="210" r="14"/>
+    <circle cx="106" cy="268" r="14"/>
+    <circle cx="296" cy="129" r="14"/>
+    <circle cx="296" cy="351" r="14"/>
+    <circle cx="399" cy="129" r="14"/>
+    <circle cx="399" cy="351" r="14"/>
+  </g>
+  <g fill="none" stroke="#fb681c" stroke-width="12" stroke-linecap="round">
+    <path d="M221 45c-29 31-29 67 0 98M251 55c-19 21-19 48 0 70M280 45c29 31 29 67 0 98"/>
+    <path d="M235 74v47M235 121l-22 37M235 121l22 37" stroke="#25292b"/>
+    <path d="M229 226h26"/>
+  </g>
+  <circle cx="235" cy="74" r="11" fill="#fb681c"/>
+  <path d="M207 207l31 19-31 19z" fill="#fb681c"/>
+  <rect x="248" y="207" width="10" height="38" rx="5" fill="#fb681c"/>
+  <text x="480" y="270" fill="#25292b" font-family="Arial, Helvetica, sans-serif" font-size="126" font-weight="800">brico</text>
+  <text x="798" y="270" fill="#fb681c" font-family="Arial, Helvetica, sans-serif" font-size="126" font-weight="800">hams</text>
+  <text x="502" y="326" fill="#25292b" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">RADIOAFICIÓN · HAZLO TÚ MISMO</text>
+  <g fill="#fb681c">
+    <rect x="703" y="361" width="36" height="8" rx="4"/>
+    <circle cx="758" cy="365" r="4"/><circle cx="778" cy="365" r="4"/><circle cx="798" cy="365" r="4"/>
+    <circle cx="843" cy="365" r="4"/><circle cx="864" cy="365" r="4"/><circle cx="885" cy="365" r="4"/><circle cx="906" cy="365" r="4"/>
+  </g>
+</svg>

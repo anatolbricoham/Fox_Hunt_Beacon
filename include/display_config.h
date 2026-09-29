@@ -33,3 +33,16 @@
 #ifndef TFT_BL
 #define TFT_BL -1
 #endif
+
+#ifndef TFT_VEXT_1_ACTIVE_LOW
+#define TFT_VEXT_1_ACTIVE_LOW 0
+#endif
+#ifndef TFT_VEXT_2_ACTIVE_LOW
+#define TFT_VEXT_2_ACTIVE_LOW 0
+#endif
+#ifndef TFT_VEXT_3_ACTIVE_LOW
+#define TFT_VEXT_3_ACTIVE_LOW 0
+#endif
+#ifndef TFT_VEXT_4_ACTIVE_LOW
+#define TFT_VEXT_4_ACTIVE_LOW 0
+#endif

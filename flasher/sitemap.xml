@@ -6,8 +6,8 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://fox.hamradio.my/logo.png</image:loc>
-      <image:title>9M2PJU ESP32 Fox Hunt Beacon logo</image:title>
+      <image:loc>https://fox.hamradio.my/bricohams-logo.svg</image:loc>
+      <image:title>BricoHams amateur radio and DIY logo</image:title>
       <image:caption>ESP32 firmware for amateur radio fox hunting with browser-based web flasher</image:caption>
     </image:image>
     <image:image>

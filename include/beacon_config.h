@@ -88,6 +88,12 @@
 #define BATTERY_PIN 34
 #endif
 
+#if PTT_PIN == AUDIO_PIN || PTT_PIN == LED_PIN || PTT_PIN == BUTTON_PIN || PTT_PIN == BATTERY_PIN || \
+  AUDIO_PIN == LED_PIN || AUDIO_PIN == BUTTON_PIN || AUDIO_PIN == BATTERY_PIN || \
+  LED_PIN == BUTTON_PIN || LED_PIN == BATTERY_PIN || BUTTON_PIN == BATTERY_PIN
+#error "Beacon GPIO assignments must be unique"
+#endif
+
 // Runtime configuration structure. Stored in ESP32 flash via Preferences.
 // Defaults come from the #defines above.
 struct BeaconConfig {

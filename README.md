@@ -1,7 +1,7 @@
-# 9M2PJU ESP32 Fox Hunt Beacon
+# BricoHams ESP32 Fox Hunt Beacon
 
 <p align="center">
-  <img src="images/fox-beacon-logo.png" alt="9M2PJU ESP32 Fox Hunt Beacon" width="600">
+  <img src="flasher/bricohams-logo.svg" alt="BricoHams amateur radio and DIY logo" width="600">
 </p>
 
 ESP32 firmware for an amateur radio fox hunting beacon using cheap handheld
@@ -33,7 +33,7 @@ the correct prebuilt firmware for your board and writes it to the ESP32 over
 USB through the browser.
 
 After flashing, the board boots into WiFi AP mode. Connect to the
-`9M2PJU-Fox-XXXX` WiFi network from a phone or laptop and browse to
+`BricoHams-Fox-XXXX` WiFi network from a phone or laptop and browse to
 `http://10.0.0.8/` to configure callsign, fox ID, timing, PTT, audio, and
 other settings.
 
@@ -65,6 +65,7 @@ Quick guide map:
 | [Wiring Guide](docs/wiring.md) | PTT/audio interface notes for cheap handheld radios. |
 | [Field Checklist](docs/field-checklist.md) | Pre-hunt bench checks, radio setup, power setup, deployment, and recovery. |
 | [Troubleshooting](docs/troubleshooting.md) | Flashing, serial, PTT, audio, battery, timing, and RF problems. |
+| [Acknowledgments](ACKNOWLEDGMENTS.md) | Credit for the original 9M2PJU project and upstream source. |
 
 ## Can This Be Made With ESP32 Boards?
 
@@ -109,7 +110,7 @@ requirements, power limits, and event safety rules.
 - Fox-slot synchronization: auto-derive startup delay from fox ID for round-robin.
 - Continuous beacon mode (MO6 finish-line transmitter) on a separate frequency.
 - CW ID generation using audio tone.
-- Optional warble tone for the rest of the transmit window (disabled by default).
+- Steady carrier for the remainder of the transmit window; optional warble tone.
 - PTT control with guard time before and after audio.
 - PTT-only test command for checking radio keying before audio tests.
 - Optional battery voltage measurement with Li-ion state-of-charge percentage.
@@ -265,7 +266,7 @@ The beacon is a timed transmitter controller.
 Example schedule (IARU 5-fox cycle, fox 1 / MOE):
 
 ```text
-00:00 - 01:00  PTT on, send "9M2PJU MOE" in CW, then steady carrier
+00:00 - 01:00  PTT on, send "EA5KAO MOE" in CW, then steady carrier
 01:00 - 05:00  PTT off, idle (foxes 2-5 take their turns)
 05:00 - 06:00  Repeat transmission
 ```
@@ -289,7 +290,7 @@ Both methods save settings to ESP32 flash memory and persist across reboots. Run
 The beacon hosts a WiFi access point with a captive portal web UI for
 phone/laptop configuration. This works on all ESP32 boards (all have WiFi).
 
-On boot, the ESP32 starts a WiFi AP named `9M2PJU-Fox-XXXX` (last 4 hex of MAC).
+On boot, the ESP32 starts a WiFi AP named `BricoHams-Fox-XXXX` (last 4 hex of MAC).
 Connect to it from a phone or laptop and the captive portal should auto-open the
 configuration page. If it does not, browse to `http://10.0.0.8/`.
 
@@ -324,7 +325,7 @@ test
 ptt_test
 defaults
 reboot
-set call 9M2PJU
+set call EA5KAO
 set fox MOE
 set mode fox
 set mode beacon
@@ -411,8 +412,8 @@ During each transmit window, the firmware sends:
 CALLSIGN in CW -> short gap -> FOX_ID in CW -> steady carrier until TX timer ends
 ```
 
-For example, with the callsign set to `9M2PJU` and the fox ID set to `MOE`, the
-radio sends `9M2PJU MOE` in Morse code and then holds a steady carrier until the
+For example, with the callsign set to `EA5KAO` and the fox ID set to `MOE`, the
+radio sends `EA5KAO MOE` in Morse code and then holds a steady carrier until the
 transmit timer ends. This matches the IARU ARDF standard signal format.
 
 If warble is enabled, it sends the CW ID sequence and then alternates a warble
@@ -446,7 +447,7 @@ Boards with an OLED, TFT, or E-Ink screen show a live status display.
 On boot, the display shows a startup splash for 3 seconds:
 
 ```
-9M2PJU Fox
+EA5KAO Fox
 ────────────────
 v1.1.0
 Starting...
@@ -637,7 +638,7 @@ Design reminders:
 ## Example Configuration
 
 ```text
-callsign = 9M2PJU
+callsign = EA5KAO
 fox_id = MOE
 frequency = configured on radio module or handheld radio
 tx_duration_seconds = 60

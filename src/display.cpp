@@ -186,6 +186,16 @@ void displayClear() {
 #elif DISPLAY_TYPE == 2
 
 // --- TFT ST7789/ST7735 via TFT_eSPI ---
+#define TFT_PIN_CONFLICT(pin) \
+  ((pin) == TFT_MOSI || (pin) == TFT_SCLK || (pin) == TFT_CS || \
+   (pin) == TFT_DC || (pin) == TFT_RST || ((TFT_BL) >= 0 && (pin) == TFT_BL))
+#if TFT_PIN_CONFLICT(PTT_PIN) || TFT_PIN_CONFLICT(AUDIO_PIN) || \
+    TFT_PIN_CONFLICT(LED_PIN) || TFT_PIN_CONFLICT(BUTTON_PIN) || \
+    TFT_PIN_CONFLICT(BATTERY_PIN)
+  #error "Beacon GPIO assignments conflict with the TFT display pins"
+#endif
+#undef TFT_PIN_CONFLICT
+
 // Color theme adapted from LoRa_APRS_Tracker (CA2RXU):
 //   - Navy blue header bar with yellow text
 //   - Content-based body coloring (TX=green, LOWBAT=red, battery=orange)
@@ -195,6 +205,30 @@ void displayClear() {
 
 TFT_eSPI tft = TFT_eSPI();
 static bool displayOn = true;
+
+static void tftPowerOn() {
+#ifdef TFT_VEXT_1_PIN
+  pinMode(TFT_VEXT_1_PIN, OUTPUT);
+  digitalWrite(TFT_VEXT_1_PIN, TFT_VEXT_1_ACTIVE_LOW ? LOW : HIGH);
+#endif
+#ifdef TFT_VEXT_2_PIN
+  pinMode(TFT_VEXT_2_PIN, OUTPUT);
+  digitalWrite(TFT_VEXT_2_PIN, TFT_VEXT_2_ACTIVE_LOW ? LOW : HIGH);
+#endif
+#ifdef TFT_VEXT_3_PIN
+  pinMode(TFT_VEXT_3_PIN, OUTPUT);
+  digitalWrite(TFT_VEXT_3_PIN, TFT_VEXT_3_ACTIVE_LOW ? LOW : HIGH);
+#endif
+#ifdef TFT_VEXT_4_PIN
+  pinMode(TFT_VEXT_4_PIN, OUTPUT);
+  digitalWrite(TFT_VEXT_4_PIN, TFT_VEXT_4_ACTIVE_LOW ? LOW : HIGH);
+#endif
+#if TFT_BL >= 0
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, HIGH);
+#endif
+  delay(10);
+}
 
 // Pick a status accent bar color from the beacon state string.
 static uint16_t stateAccentColor(const char *stateStr) {
@@ -217,6 +251,7 @@ static uint16_t stateTextColor(const char *stateStr) {
 }
 
 void displayInit(const char *callsign, const char *version) {
+  tftPowerOn();
   tft.init();
   tft.setRotation(1);
   displayStartupScreen(callsign, version);
@@ -345,11 +380,12 @@ void displayAPMode(const char *ssid, const char *ip) {
 
 void displayPower(bool on) {
   displayOn = on;
+#if TFT_BL >= 0
+  digitalWrite(TFT_BL, on ? HIGH : LOW);
+#endif
   if (on) {
     tft.fillScreen(COLOR_BG);
   }
-  // TFT_eSPI doesn't have a simple power-off; we just stop drawing.
-  // Backlight control would need a BL pin PWM which varies per board.
 }
 
 void displayClear() {
@@ -368,6 +404,25 @@ void displayClear() {
 #include "display_colors.h"
 
 // Select the correct panel class based on resolution
+#define EINK_PIN_CONFLICT(pin) \
+  ((pin) == EINK_SCLK || (pin) == EINK_MOSI || (pin) == EINK_CS || \
+   (pin) == EINK_DC || (pin) == EINK_RST || (pin) == EINK_BUSY || \
+   (pin) == EINK_VEXT)
+#ifdef EINK_VEXT_2
+  #define EINK_PIN_CONFLICT_2(pin) ((pin) == EINK_VEXT_2)
+#else
+  #define EINK_PIN_CONFLICT_2(pin) 0
+#endif
+#if EINK_PIN_CONFLICT(PTT_PIN) || EINK_PIN_CONFLICT(AUDIO_PIN) || \
+    EINK_PIN_CONFLICT(LED_PIN) || EINK_PIN_CONFLICT(BUTTON_PIN) || \
+    EINK_PIN_CONFLICT(BATTERY_PIN) || EINK_PIN_CONFLICT_2(PTT_PIN) || \
+    EINK_PIN_CONFLICT_2(AUDIO_PIN) || EINK_PIN_CONFLICT_2(LED_PIN) || \
+    EINK_PIN_CONFLICT_2(BUTTON_PIN) || EINK_PIN_CONFLICT_2(BATTERY_PIN)
+  #error "Beacon GPIO assignments conflict with the E-Ink display pins"
+#endif
+#undef EINK_PIN_CONFLICT_2
+#undef EINK_PIN_CONFLICT
+
 #if EINK_WIDTH == 250 && EINK_HEIGHT == 122
   // 2.13" BW (250x122) — DEPG0213BN / SSD1680
   static GxEPD2_BW<GxEPD2_213_BN, GxEPD2_213_BN::HEIGHT> eink(
@@ -436,15 +491,25 @@ static void einkPowerOn() {
   #endif
   delay(10);
 #endif
+#ifdef EINK_VEXT_2
+  pinMode(EINK_VEXT_2, OUTPUT);
+  digitalWrite(EINK_VEXT_2, HIGH);
+  delay(10);
+#endif
 }
 
-void displayInit(const char *callsign, const char *version) {
+static void einkInit() {
   einkPowerOn();
-  SPI.begin(EINK_SCLK, -1, EINK_MOSI, EINK_CS);
   eink.init();
   eink.setRotation(1);
   eink.setTextColor(GxEPD_BLACK);
   eink.setTextSize(1);
+  firstRefresh = true;
+}
+
+void displayInit(const char *callsign, const char *version) {
+  SPI.begin(EINK_SCLK, -1, EINK_MOSI, EINK_CS);
+  einkInit();
   displayStartupScreen(callsign, version);
 }
 
@@ -578,8 +643,11 @@ void displayPower(bool on) {
       digitalWrite(EINK_VEXT, LOW);   // active HIGH: LOW = OFF
     #endif
   } else {
-    einkPowerOn();
+    einkInit();
   }
+#endif
+#ifdef EINK_VEXT_2
+  digitalWrite(EINK_VEXT_2, on ? HIGH : LOW);
 #endif
 }
 
