@@ -1,0 +1,62 @@
+name: Deploy Web Flasher
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'flasher/**'
+      - 'flasher/.nojekyll'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download firmware binaries from latest release
+        run: |
+          mkdir -p flasher/firmware
+          # Get the latest release tag
+          LATEST=$(curl -sL https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "No release found — deploying flasher without firmware binaries"
+            exit 0
+          fi
+          echo "Latest release: $LATEST"
+          # Download all firmware-*.bin assets from the release (look up by tag)
+          curl -sL "https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST" | \
+            jq -r '.assets[] | select(.name | startswith("firmware-")) | .browser_download_url' | \
+            while read -r url; do
+              filename=$(basename "$url")
+              echo "Downloading $filename ..."
+              curl -sL -o "flasher/firmware/$filename" "$url"
+            done
+          echo "Downloaded binaries:"
+          ls -la flasher/firmware/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload flasher artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: flasher
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
