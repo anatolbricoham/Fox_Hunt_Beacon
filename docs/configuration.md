@@ -11,6 +11,11 @@ are stored in ESP32 flash and override the compile-time defaults. Run `defaults`
 in Serial Monitor or click the Defaults button in the web UI to restore the
 values from `include/beacon_config.h`.
 
+The current single-beacon default is `MOE`; fox sync starts that slot without
+the extra 60-second delay used by `MOI`. Saved Preferences survive firmware
+uploads, so a beacon that still stores `MOI` must run `defaults` or `set fox MOE`
+to adopt the single-beacon default.
+
 Boards with a display also have an on-screen settings menu (double-click the
 button) for quick on/off toggles. This is a convenience for field use and only
 covers a subset of settings — full configuration requires the web UI or serial
@@ -26,9 +31,9 @@ not, browse to `http://10.0.0.8/`.
 The web UI provides forms for all settings, plus buttons for test transmission,
 PTT test, restore defaults, and reboot. No app or internet connection is needed.
 
-The web UI works on all ESP32 boards. Boards with OLED or TFT screens also show
-a live status display with callsign, fox ID, mode, state, timing, battery, and
-AP IP address.
+The web UI works on all ESP32 boards. Boards with OLED, TFT, or E-Ink screens
+also show status with callsign, fox ID, mode, state, timing, battery, and AP IP
+address. E-Ink refresh is slower than OLED/TFT.
 
 The WiFi AP can be turned on or off from the on-screen settings menu or the web
 UI. When off, the WiFi radio is disabled to save power.
@@ -99,6 +104,10 @@ enabled, it alternates between 700 Hz and 900 Hz instead.
 
 Edit `include/beacon_config.h` when you want every fresh flash or `defaults`
 command to return to your preferred setup.
+
+Settings are stored in ESP32 NVS Preferences and survive firmware uploads. A
+new compile-time default does not replace an already-saved value; run `defaults`
+after flashing if you want an existing beacon to adopt the current defaults.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |

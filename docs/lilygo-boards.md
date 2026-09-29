@@ -2,10 +2,11 @@
 
 This firmware can build for several popular LilyGO and TTGO ESP32 boards.
 LilyGO boards with LoRa, GNSS, displays, touch controllers, or battery charger
-hardware are supported as ESP32 controller boards for this project: the firmware
-still keys an external FM radio or transmitter module through PTT and audio
-wiring. It does not use the onboard LoRa radio as an ARDF FM fox transmitter,
-and it does not use onboard displays or GNSS in the current firmware.
+hardware can be used as ESP32 controllers for this project. The supported TFT
+and OLED profiles use the onboard display for status and menu output. The
+firmware still keys an external FM radio or transmitter module through PTT and
+audio wiring; it does not use onboard LoRa as an ARDF FM transmitter or read
+GNSS position/time. Touch controllers are not currently used.
 
 ## Supported PlatformIO Environments
 
@@ -13,15 +14,15 @@ Use these names with PlatformIO:
 
 | Environment | PlatformIO board ID | Notes |
 | --- | --- | --- |
-| `lilygo-t-display` | `lilygo-t-display` | Original ESP32 T-Display. Display is not used. |
-| `lilygo-t-display-s3` | `lilygo-t-display-s3` | ESP32-S3 T-Display. Display is not used. |
+| `lilygo-t-display` | `lilygo-t-display` | Original ESP32 T-Display with ST7789 status/menu display. |
+| `lilygo-t-display-s3` | `lilygo-t-display-s3` | ESP32-S3 T-Display with ST7789 status/menu display. |
 | `lilygo-t3-s3` | `lilygo-t3-s3` | ESP32-S3 LoRa board. Onboard LoRa is not used. |
-| `ttgo-lora32-v1` | `ttgo-lora32-v1` | TTGO LoRa32 OLED V1. Onboard LoRa and OLED are not used. |
-| `ttgo-lora32-v2` | `ttgo-lora32-v2` | TTGO LoRa32 OLED V2. Onboard LoRa and OLED are not used. |
-| `ttgo-lora32-v21` | `ttgo-lora32-v21` | TTGO LoRa32 OLED v2.1.6. Onboard LoRa and OLED are not used. |
-| `ttgo-t-beam` | `ttgo-t-beam` | TTGO T-Beam with LoRa/GNSS hardware. Onboard LoRa and GNSS are not used. |
+| `ttgo-lora32-v1` | `ttgo-lora32-v1` | TTGO LoRa32 V1; OLED is used for status/menu, onboard LoRa is not used. |
+| `ttgo-lora32-v2` | `ttgo-lora32-v2` | TTGO LoRa32 V2; OLED is used for status/menu, onboard LoRa is not used. |
+| `ttgo-lora32-v21` | `ttgo-lora32-v21` | TTGO LoRa32 v2.1.6; OLED is used for status/menu, onboard LoRa is not used. |
+| `ttgo-t-beam` | `ttgo-t-beam` | TTGO T-Beam; OLED is used for status/menu, onboard LoRa/GNSS are not used. |
 | `ttgo-t-oi-plus` | `ttgo-t-oi-plus` | ESP32-C3 T-OI Plus. Fewer GPIO pins than classic ESP32 boards. |
-| `ttgo-t-watch` | `ttgo-t-watch` | T-Watch build target. Watch peripherals are not used. |
+| `ttgo-t-watch` | `ttgo-t-watch` | T-Watch with ST7789 status/menu display; touch and watch sensors are not used. |
 | `ttgo-t1` | `ttgo-t1` | TTGO T1 ESP32 board. |
 | `ttgo-t7-v13-mini32` | `ttgo-t7-v13-mini32` | TTGO T7 V1.3 Mini32. |
 | `ttgo-t7-v14-mini32` | `ttgo-t7-v14-mini32` | TTGO T7 V1.4 Mini32. |
@@ -100,10 +101,9 @@ radio is a replacement for a legal FM ARDF transmitter.
 Boards such as TTGO LoRa32, LilyGO T3-S3, and TTGO T-Beam include LoRa radios.
 This firmware does not currently transmit ARDF IDs through those radios. Boards
 such as TTGO T-Beam may also include GNSS hardware, but the current firmware
-does not read position or time from GNSS.
-
-Boards such as T-Display and T-Watch include displays. The current firmware uses
-Serial Monitor and LED status instead of the display.
+does not read position or time from GNSS. The T-Display, T-Display S3 and
+T-Watch TFTs are supported for status and menu output; touch and unrelated watch
+peripherals remain unused. See the [complete board and pin matrix](board-matrix.md).
 
 ## VS Code Usage
 

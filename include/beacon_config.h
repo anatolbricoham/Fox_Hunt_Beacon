@@ -14,7 +14,7 @@
 
 // What the beacon sends at the start of every transmission.
 #define DEFAULT_CALLSIGN "EA5KAO"
-#define DEFAULT_FOX_ID "MOI"
+#define DEFAULT_FOX_ID "MOE"
 
 // Main timing. Defaults follow the IARU Region 1 ARDF 5-fox cycle: each fox
 // transmits for 60 seconds, then waits 240 seconds while the other four foxes

@@ -20,6 +20,10 @@ build tools, no command line.
 
 **Web Flasher: <https://fox.hamradio.my>**
 
+The browser flasher needs a firmware GitHub Release. Until the first Release is
+published, build and upload from PlatformIO using the exact environment for
+your board; see [Installation And Upload](docs/installation.md).
+
 Requirements:
 
 - Google Chrome, Microsoft Edge, or Opera (Web Serial API required).
@@ -48,11 +52,13 @@ Recommended reading order:
 
 1. [Understanding The Beacon](docs/understanding.md)
 2. [Configuration Guide](docs/configuration.md)
-3. [Heltec Board Support](docs/heltec-boards.md)
-4. [LilyGO Board Support](docs/lilygo-boards.md)
-5. [Wiring Guide](docs/wiring.md)
-6. [Field Checklist](docs/field-checklist.md)
-7. [Troubleshooting](docs/troubleshooting.md)
+3. [Board And Pin Matrix](docs/board-matrix.md)
+4. [Heltec Board Support](docs/heltec-boards.md)
+5. [LilyGO Board Support](docs/lilygo-boards.md)
+6. [Software Architecture](docs/software-architecture.md)
+7. [Wiring Guide](docs/wiring.md)
+8. [Field Checklist](docs/field-checklist.md)
+9. [Troubleshooting](docs/troubleshooting.md)
 
 Quick guide map:
 
@@ -60,8 +66,10 @@ Quick guide map:
 | --- | --- |
 | [Understanding The Beacon](docs/understanding.md) | ARDF basics, what the beacon sends, and how the ESP32/radio parts work together. |
 | [Configuration Guide](docs/configuration.md) | Callsign, ARDF fox IDs, timing, warble, PTT, battery, and Serial Monitor commands. |
+| [Board And Pin Matrix](docs/board-matrix.md) | All 32 PlatformIO environments, GPIO profiles, display buses, and build commands. |
 | [Heltec Board Support](docs/heltec-boards.md) | Pin notes for popular Heltec ESP32 boards. |
 | [LilyGO Board Support](docs/lilygo-boards.md) | Pin notes for popular LilyGO and TTGO ESP32 boards. |
+| [Software Architecture](docs/software-architecture.md) | Boot, state machine, persistence, web API, displays, CI and release flow. |
 | [Wiring Guide](docs/wiring.md) | PTT/audio interface notes for cheap handheld radios. |
 | [Field Checklist](docs/field-checklist.md) | Pre-hunt bench checks, radio setup, power setup, deployment, and recovery. |
 | [Troubleshooting](docs/troubleshooting.md) | Flashing, serial, PTT, audio, battery, timing, and RF problems. |

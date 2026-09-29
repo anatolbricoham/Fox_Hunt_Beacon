@@ -238,6 +238,11 @@ void webAdminInit(const char *apNamePrefix) {
 void webAdminLoop() {
   if (!running) return;
 
+  if (!config.wifiApEnabled) {
+    webAdminStop();
+    return;
+  }
+
   // Process captive portal DNS requests.
   dnsServer.processNextRequest();
 

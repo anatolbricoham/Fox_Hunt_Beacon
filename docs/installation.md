@@ -2,6 +2,10 @@
 
 This guide gets the firmware onto an ESP32 board using PlatformIO.
 
+The browser flasher at `https://fox.hamradio.my` downloads prebuilt files from
+the latest GitHub Release. If no Release has been published yet, use the
+PlatformIO build and upload steps in this guide.
+
 ## Requirements
 
 - ESP32 development board.
@@ -195,6 +199,11 @@ Settings are saved in ESP32 flash. To restore the values from
 `include/beacon_config.h`, type `defaults` in Serial Monitor or click the
 Defaults button in the web UI.
 
+Saved values survive firmware uploads. After updating an existing beacon, run
+`defaults` if you want it to adopt the current compile-time defaults, including
+callsign `EA5KAO` and fox ID `MOE`; otherwise its saved callsign, ID, timings and
+other settings remain active.
+
 ## Choose A Board Environment
 
 The default environment is `esp32dev`, which works for many ESP32 DevKit boards.
@@ -239,8 +248,10 @@ Available environments:
 If your board is not listed, start with `esp32dev` for classic ESP32 boards, or
 add a new PlatformIO environment in `platformio.ini`.
 
-For Heltec-specific notes, see [heltec-boards.md](heltec-boards.md). For
-LilyGO and TTGO notes, see [lilygo-boards.md](lilygo-boards.md).
+For the complete environment/GPIO table, see [Board And Pin Matrix](board-matrix.md).
+For model-specific notes, see [Heltec Board Support](heltec-boards.md) and
+[LilyGO Board Support](lilygo-boards.md). For the runtime and release pipeline,
+see [Software Architecture](software-architecture.md).
 
 ## Configure Before Upload
 
@@ -315,7 +326,8 @@ ptt_test
 
 1. Upload firmware with no radio connected.
 2. Run `show` and confirm callsign, fox ID, timing, and pins.
-3. Run `ptt_test` and check GPIO 25 with an LED or multimeter.
+3. Run `ptt_test` and check the PTT GPIO printed by `show` with an LED or
+  multimeter; the pin depends on the selected board environment.
 4. Wire the PTT interface only.
 5. Run `ptt_test` again and confirm the radio keys and releases.
 6. Add audio wiring with the level trimpot turned low.

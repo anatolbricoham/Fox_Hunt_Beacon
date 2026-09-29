@@ -15,6 +15,7 @@ constexpr uint32_t LED_LOW_BATTERY_BLINK_MS = 350;
 constexpr uint32_t PTT_TEST_MS = 1200;
 constexpr uint32_t STARTUP_SCREEN_MS = 3000;
 constexpr uint32_t MENU_TIMEOUT_MS = 30000;
+constexpr uint32_t MENU_UPDATE_INTERVAL_MS = 200;
 constexpr uint32_t DISPLAY_ECO_TIMEOUT_MS = 4000;
 constexpr uint32_t DISPLAY_ECO_GRACE_MS = 10000;  // no eco sleep for first 10s after boot
 
@@ -161,7 +162,10 @@ void updateDisplay() {
   }
 
   // Throttle display updates to 1 per second for status, faster for menu
-  if (displayMode == DisplayMode::Status && millis() - lastDisplayUpdateAt < 1000) return;
+  const uint32_t updateInterval = displayMode == DisplayMode::Menu
+                                     ? MENU_UPDATE_INTERVAL_MS
+                                     : 1000;
+  if (millis() - lastDisplayUpdateAt < updateInterval) return;
   lastDisplayUpdateAt = millis();
 
   // Eco mode: sleep display after inactivity (with startup grace period)
