@@ -37,7 +37,7 @@ the RF signal.
 
 ### 1. Flash the firmware
 
-**Option A: web flasher (no tools needed):** <https://fox.hamradio.my>
+**Option A: web flasher (no tools needed):** <https://anatolbricoham.github.io/Fox_Hunt_Beacon/>
 
 1. Open the page in Chrome, Edge or Opera (Web Serial is required; Firefox and
    Safari do not work).

@@ -2,7 +2,7 @@
 
 This guide gets the firmware onto an ESP32 board using PlatformIO.
 
-The browser flasher at `https://fox.hamradio.my` downloads prebuilt files from
+The browser flasher at `https://anatolbricoham.github.io/Fox_Hunt_Beacon/` downloads prebuilt files from
 the latest GitHub Release. If no Release has been published yet, use the
 PlatformIO build and upload steps in this guide.
 
