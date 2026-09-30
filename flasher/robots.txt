@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fox.hamradio.my/sitemap.xml
+Sitemap: https://anatolbricoham.github.io/Fox_Hunt_Beacon/sitemap.xml

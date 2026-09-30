@@ -355,7 +355,7 @@ regenerates `include/web_assets.h`.
 | `.github/workflows/pages.yml` | changes in `flasher/`, release workflow completion, release published, manual | Copies the latest Release's `firmware-*` assets into `flasher/firmware/` and deploys `flasher/` to GitHub Pages. |
 | `flasher/index.html` | browser | Board picker (32 boards, filter by display type). Builds a one-board ESP Web Tools manifest pointing at `firmware/firmware-<env>.bin`, offset 0, and offers an erase on first install. |
 | `flasher/manifest.json` | browser | Static manifest listing every board with the same relative paths. |
-| `flasher/CNAME`, `robots.txt`, `sitemap.xml`, `.nojekyll` | Pages | Custom domain `fox.hamradio.my` and crawler settings. |
+| `flasher/robots.txt`, `sitemap.xml`, `.nojekyll` | Pages | Crawler settings; `.nojekyll` serves files as-is. The site is published at https://anatolbricoham.github.io/Fox_Hunt_Beacon/ (no custom domain). |
 | `flasher/wiring-diagram.svg`, `bricohams_horizontal.png` | Pages | Images used by the flasher page. |
 
 When you add or remove a board, update all of these together:

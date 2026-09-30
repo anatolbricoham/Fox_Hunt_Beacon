@@ -19,7 +19,7 @@
   <meta name="distribution" content="global">
 
   <!-- Canonical -->
-  <link rel="canonical" href="https://fox.hamradio.my/">
+  <link rel="canonical" href="https://anatolbricoham.github.io/Fox_Hunt_Beacon/">
 
   <!-- Icons -->
   <link rel="icon" type="image/png" href="bricohams_horizontal.png">
@@ -28,10 +28,10 @@
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://fox.hamradio.my/">
+  <meta property="og:url" content="https://anatolbricoham.github.io/Fox_Hunt_Beacon/">
   <meta property="og:title" content="BricoHams ESP32 Fox Hunt Beacon Firmware Web Flasher">
   <meta property="og:description" content="Flash ESP32 fox hunt beacon firmware directly from your browser. Supports 32 ESP32 boards including Heltec, LilyGO, TTGO, and generic DevKit boards.">
-  <meta property="og:image" content="https://fox.hamradio.my/bricohams_horizontal.png">
+  <meta property="og:image" content="https://anatolbricoham.github.io/Fox_Hunt_Beacon/bricohams_horizontal.png">
   <meta property="og:image:alt" content="BricoHams amateur radio and DIY logo">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="420">
@@ -40,10 +40,10 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="https://fox.hamradio.my/">
+  <meta name="twitter:url" content="https://anatolbricoham.github.io/Fox_Hunt_Beacon/">
   <meta name="twitter:title" content="BricoHams ESP32 Fox Hunt Beacon Firmware Web Flasher">
   <meta name="twitter:description" content="Flash ESP32 fox hunt beacon firmware directly from your browser. No software install. Supports 32 ESP32 boards. Free open-source amateur radio ARDF beacon.">
-  <meta name="twitter:image" content="https://fox.hamradio.my/bricohams_horizontal.png">
+  <meta name="twitter:image" content="https://anatolbricoham.github.io/Fox_Hunt_Beacon/bricohams_horizontal.png">
   <meta name="twitter:image:alt" content="BricoHams amateur radio and DIY logo">
 
   <!-- Theme Color -->
@@ -59,8 +59,8 @@
     "applicationCategory": "EmbeddedFirmware",
     "softwareVersion": "1.1.0",
     "description": "ESP32 firmware for amateur radio fox hunting (ARDF) beacons. Controls a handheld radio via PTT and audio interface to transmit CW identification and optional warble tones. Supports 32 ESP32 board variants with web-based browser flashing, WiFi admin UI, OLED/TFT/E-Ink displays with color-themed UI, battery voltage and percentage monitoring, display eco mode, and IARU standard fox timing.",
-    "url": "https://fox.hamradio.my/",
-    "downloadUrl": "https://fox.hamradio.my/",
+    "url": "https://anatolbricoham.github.io/Fox_Hunt_Beacon/",
+    "downloadUrl": "https://anatolbricoham.github.io/Fox_Hunt_Beacon/",
     "author": {
       "@type": "Person",
       "name": "BricoHams",
@@ -112,7 +112,7 @@
         "@type": "ListItem",
         "position": 2,
         "name": "Web Flasher",
-        "item": "https://fox.hamradio.my/"
+        "item": "https://anatolbricoham.github.io/Fox_Hunt_Beacon/"
       }
     ]
   }
@@ -137,7 +137,7 @@
         "name": "How do I flash the firmware to my ESP32 board?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Open the web flasher at fox.hamradio.my in Google Chrome, Microsoft Edge, or Opera. Select your board from the list, click Install Firmware, and connect your board via USB when prompted. The flasher downloads the correct prebuilt firmware and writes it to the ESP32 over USB through the browser. No software install or command line is needed."
+          "text": "Open the web flasher at anatolbricoham.github.io/Fox_Hunt_Beacon in Google Chrome, Microsoft Edge, or Opera. Select your board from the list, click Install Firmware, and connect your board via USB when prompted. The flasher downloads the correct prebuilt firmware and writes it to the ESP32 over USB through the browser. No software install or command line is needed."
         }
       },
       {
@@ -621,9 +621,6 @@
         Select a board above to begin installation.
       </div>
 
-      <div id="downloadCounter" style="margin-top:18px;font-size:.9rem;color:#64748b;text-align:center;">
-        <span id="counterLabel">Loading install count&hellip;</span>
-      </div>
 
       <div id="browser-warning-fallback" class="browser-warning">
         <strong>Browser not supported.</strong> This web flasher requires a
@@ -1104,32 +1101,5 @@ set ptt active_low     (only if your circuit keys on GPIO LOW)</code></pre>
     })();
   </script>
 
-  <!-- Install counter — counts real successful installs via stats.hamradio.my
-       Cloudflare Worker (not blocked by ad blockers). Listens for the "closed"
-       event from the esp-web-install-button dialog and only increments when
-       state === 'finished'. -->
-  <script>
-  (function() {
-    var API_BASE = 'https://stats.hamradio.my/esp32-fox-hunt';
-    var counterLabel = document.getElementById('counterLabel');
-    function renderCount(n) {
-      counterLabel.innerHTML = '<strong style="font-size:1.3em;color:#07b6d3;">' + n + '</strong> installs via this page';
-    }
-    fetch(API_BASE + '/')
-      .then(function(r) { return r.json(); })
-      .then(function(data) { renderCount(data.count || 0); })
-      .catch(function() { counterLabel.textContent = ''; });
-    document.body.addEventListener('closed', function(e) {
-      var dialog = e.target;
-      var state = dialog && dialog._installState;
-      if (state && state.state === 'finished') {
-        fetch(API_BASE + '/up')
-          .then(function(r) { return r.json(); })
-          .then(function(data) { renderCount(data.count || 0); })
-          .catch(function() {});
-      }
-    });
-  })();
-  </script>
 </body>
 </html>

@@ -2,16 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
-    <loc>https://fox.hamradio.my/</loc>
+    <loc>https://anatolbricoham.github.io/Fox_Hunt_Beacon/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://fox.hamradio.my/bricohams_horizontal.png</image:loc>
+      <image:loc>https://anatolbricoham.github.io/Fox_Hunt_Beacon/bricohams_horizontal.png</image:loc>
       <image:title>BricoHams amateur radio and DIY logo</image:title>
       <image:caption>ESP32 firmware for amateur radio fox hunting with browser-based web flasher</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://fox.hamradio.my/wiring-diagram.svg</image:loc>
+      <image:loc>https://anatolbricoham.github.io/Fox_Hunt_Beacon/wiring-diagram.svg</image:loc>
       <image:title>ESP32 to handheld radio wiring diagram</image:title>
       <image:caption>Wiring diagram for connecting ESP32 to a handheld radio via PTT and audio interface</image:caption>
     </image:image>
