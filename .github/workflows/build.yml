@@ -7,7 +7,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'data_embed/**'
-      - 'tools/compress.py'
+      - 'tools/**'
       - 'platformio.ini'
       - '.github/workflows/build.yml'
   pull_request:
@@ -16,7 +16,7 @@ on:
       - 'src/**'
       - 'include/**'
       - 'data_embed/**'
-      - 'tools/compress.py'
+      - 'tools/**'
       - 'platformio.ini'
       - '.github/workflows/build.yml'
   workflow_dispatch:
@@ -93,6 +93,7 @@ jobs:
           name: firmware-${{ matrix.env }}
           path: |
             .pio/build/${{ matrix.env }}/firmware.bin
+            .pio/build/${{ matrix.env }}/firmware-merged.bin
             .pio/build/${{ matrix.env }}/firmware.elf
           if-no-files-found: ignore
           retention-days: 7

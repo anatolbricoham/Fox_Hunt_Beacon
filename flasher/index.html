@@ -1052,7 +1052,9 @@ set ptt active_low     (only if your circuit keys on GPIO LOW)</code></pre>
             chipFamily: b.chip,
             name: b.name,
             parts: [
-              { path: RELEASE_BASE + b.env + ".bin", offset: 0 }
+              // Absolute URL: the manifest is a blob: URL, which cannot be
+              // used as a base for resolving a relative path.
+              { path: new URL(RELEASE_BASE + b.env + ".bin", document.baseURI).href, offset: 0 }
             ]
           }
         ]

@@ -178,6 +178,9 @@ Open Serial Monitor at 115200 baud and type commands followed by Enter.
 | `set battery off` | Disable low-battery cutoff. |
 | `set battery_scale <number>` | Set ADC divider multiplier. |
 | `set low_battery <volts>` | Set low-battery cutoff voltage. |
+| `set wifi_ap on\|off` | Turn the WiFi AP and web admin UI on or off. |
+| `set wifi_ap_timeout <minutes>` | Auto-off the AP after this many idle minutes (0 = never). |
+| `set eco_mode on\|off` | Enable or disable display eco mode (screen off after 4 s). |
 
 The firmware constrains values to practical ranges. If a value is outside the
 allowed range, it is clipped to the nearest allowed value.

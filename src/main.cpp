@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include <OneButton.h>
+#include <atomic>
 #include "beacon_config.h"
+#include "beacon_runtime.h"
 #include "display.h"
 #include "web_admin.h"
 
@@ -18,16 +20,53 @@ constexpr uint32_t MENU_TIMEOUT_MS = 30000;
 constexpr uint32_t MENU_UPDATE_INTERVAL_MS = 200;
 constexpr uint32_t DISPLAY_ECO_TIMEOUT_MS = 4000;
 constexpr uint32_t DISPLAY_ECO_GRACE_MS = 10000;  // no eco sleep for first 10s after boot
+constexpr uint32_t BATTERY_SAMPLE_INTERVAL_MS = 1000;
+constexpr float LOW_BATTERY_RECOVERY_HYSTERESIS_V = 0.20f;
+constexpr uint32_t REBOOT_DELAY_MS = 500;       // let the HTTP reply leave first
+constexpr uint32_t TX_SERVICE_MARGIN_MS = 1500;  // stop slow display work near TX end
+const char *const AP_NAME_PREFIX = "BricoHams-Fox";
 
 Preferences preferences;
 BeaconConfig config;
-BeaconState state = BeaconState::StartupDelay;
+volatile BeaconState state = BeaconState::StartupDelay;
 uint32_t stateStartedAt = 0;
 uint32_t lastLedToggleAt = 0;
 bool ledOn = false;
 bool forceTransmit = false;
 String serialLine;
 uint32_t lastDisplayUpdateAt = 0;
+
+// Absolute schedule: millis() at which the next scheduled transmission starts.
+// Advancing it by exactly one cycle keeps the IARU round-robin slot from
+// drifting and lets a test transmission run without moving the slot.
+uint32_t nextTxAt = 0;
+
+// Battery: sampled at most once per BATTERY_SAMPLE_INTERVAL_MS by the main
+// loop. Other tasks read the cached values only.
+volatile float batteryVoltageCache = 0.0f;
+volatile uint8_t batteryPercentCache = 0;
+uint32_t lastBatterySampleAt = 0;
+bool batteryCacheValid = false;
+
+// Cross-task request queue (see beacon_runtime.h).
+SemaphoreHandle_t configMutex = nullptr;
+BeaconConfig pendingConfig;
+bool pendingConfigValid = false;
+std::atomic<uint8_t> pendingRequests{0};
+bool rebootPending = false;
+uint32_t rebootRequestedAt = 0;
+
+// Holds the config mutex for the lifetime of the object. The main loop takes
+// it while it writes config; other tasks take it while they copy config.
+class ConfigLock {
+ public:
+  ConfigLock() {
+    if (configMutex) xSemaphoreTake(configMutex, portMAX_DELAY);
+  }
+  ~ConfigLock() {
+    if (configMutex) xSemaphoreGive(configMutex);
+  }
+};
 
 // Menu state machine
 enum class DisplayMode {
@@ -68,16 +107,43 @@ const char *const menuLabels[] = {
   "Exit",
 };
 
-int beaconStateValue() {
-  return static_cast<int>(state);
-}
-
 float readBatteryVoltage();
 uint8_t readBatteryPercent();
 void saveConfig();
 void loadDefaultConfig();
 void enterState(BeaconState nextState);
 uint32_t elapsedSince(uint32_t startedAt);
+void enterIdleAfter(uint32_t delayMs);
+void applyWifiState();
+
+// --- Cross-task API (beacon_runtime.h) ---
+
+int beaconStateValue() {
+  return static_cast<int>(state);
+}
+
+BeaconConfig beaconConfigSnapshot() {
+  ConfigLock lock;
+  return config;
+}
+
+void beaconQueueConfig(const BeaconConfig &next) {
+  ConfigLock lock;
+  pendingConfig = next;
+  pendingConfigValid = true;
+}
+
+void beaconQueueRequest(BeaconRequest request) {
+  pendingRequests.fetch_or(static_cast<uint8_t>(request));
+}
+
+float beaconBatteryVoltage() {
+  return batteryVoltageCache;
+}
+
+uint8_t beaconBatteryPercent() {
+  return batteryPercentCache;
+}
 
 // Get the current value string for a menu item.
 const char *menuValueStr(int idx) {
@@ -95,40 +161,35 @@ const char *menuValueStr(int idx) {
 
 // Toggle the selected menu item and save config.
 void menuToggle(int idx) {
-  switch (idx) {
-    case MENU_WIFI_AP:
-      config.wifiApEnabled = !config.wifiApEnabled;
-      if (config.wifiApEnabled) {
-        webAdminInit("BricoHams-Fox");
-      } else {
-        webAdminStop();
-      }
-      break;
-    case MENU_WARBLE:
-      config.warbleEnabled = !config.warbleEnabled;
-      break;
-    case MENU_FOX_SYNC:
-      config.foxSyncEnabled = !config.foxSyncEnabled;
-      break;
-    case MENU_BATTERY:
-      config.batteryEnabled = !config.batteryEnabled;
-      if (config.batteryEnabled) {
-        analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
-      }
-      break;
-    case MENU_BEACON_MODE:
-      config.beaconMode = !config.beaconMode;
-      enterState(config.beaconMode ? BeaconState::ContinuousTransmit : BeaconState::Idle);
-      break;
-    case MENU_ECO_MODE:
-      config.displayEcoMode = !config.displayEcoMode;
-      break;
-    case MENU_EXIT:
-      displayMode = DisplayMode::Status;
-      displayModeEnteredAt = millis();
-      return;
+  if (idx == MENU_EXIT) {
+    displayMode = DisplayMode::Status;
+    displayModeEnteredAt = millis();
+    return;
+  }
+
+  {
+    ConfigLock lock;
+    switch (idx) {
+      case MENU_WIFI_AP:     config.wifiApEnabled = !config.wifiApEnabled; break;
+      case MENU_WARBLE:      config.warbleEnabled = !config.warbleEnabled; break;
+      case MENU_FOX_SYNC:    config.foxSyncEnabled = !config.foxSyncEnabled; break;
+      case MENU_BATTERY:     config.batteryEnabled = !config.batteryEnabled; break;
+      case MENU_BEACON_MODE: config.beaconMode = !config.beaconMode; break;
+      case MENU_ECO_MODE:    config.displayEcoMode = !config.displayEcoMode; break;
+    }
   }
   saveConfig();
+
+  if (idx == MENU_WIFI_AP) {
+    applyWifiState();
+  } else if (idx == MENU_BATTERY) {
+    batteryCacheValid = false;
+  } else if (idx == MENU_BEACON_MODE && !config.beaconMode &&
+             state == BeaconState::ContinuousTransmit) {
+    // runContinuousBeacon() notices the change and returns to Idle itself.
+  } else if (idx == MENU_BEACON_MODE && !config.beaconMode) {
+    enterIdleAfter(config.idleSeconds * 1000UL);
+  }
 }
 
 void renderMenu() {
@@ -168,10 +229,12 @@ void updateDisplay() {
   if (millis() - lastDisplayUpdateAt < updateInterval) return;
   lastDisplayUpdateAt = millis();
 
-  // Eco mode: sleep display after inactivity (with startup grace period)
+  // Eco mode: sleep display after inactivity. During the grace period after
+  // boot the status screen keeps drawing so the operator can check it.
   if (displayMode == DisplayMode::Status && config.displayEcoMode) {
-    if (millis() < DISPLAY_ECO_GRACE_MS) return;  // grace period after boot
-    if (!displaySleeping && elapsedSince(lastActivityAt) > DISPLAY_ECO_TIMEOUT_MS) {
+    const bool inGracePeriod = millis() < DISPLAY_ECO_GRACE_MS;
+    if (!inGracePeriod && !displaySleeping &&
+        elapsedSince(lastActivityAt) > DISPLAY_ECO_TIMEOUT_MS) {
       displaySleeping = true;
       displayPower(false);
       return;
@@ -205,13 +268,14 @@ void updateDisplay() {
              readBatteryVoltage(), readBatteryPercent());
   }
 
+  const String ip = webAdminIsRunning() ? webAdminGetIp() : String();
   displayUpdate(config.callSign.c_str(),
                 config.foxId.c_str(),
                 config.beaconMode ? "BEACON" : "FOX",
                 stateToString(state),
                 timingStr,
                 batteryStr,
-                webAdminIsRunning() ? webAdminGetIp().c_str() : "");
+                ip.c_str());
 }
 
 String normalizeId(String value) {
@@ -243,29 +307,52 @@ uint8_t foxNumberFromId(const String &id) {
 // the startup delay is overridden so that five beacons powered on at roughly
 // the same time fall into the standard round-robin order. Fox 1 starts
 // immediately, fox 2 after one TX slot, and so on.
-uint32_t resolvedStartupDelaySeconds() {
-  if (!config.foxSyncEnabled || config.beaconMode) {
-    return config.startupDelaySeconds;
+uint32_t resolvedStartupDelaySeconds(const BeaconConfig &cfg) {
+  if (!cfg.foxSyncEnabled || cfg.beaconMode) {
+    return cfg.startupDelaySeconds;
   }
-  const uint8_t foxNumber = foxNumberFromId(config.foxId);
+  const uint8_t foxNumber = foxNumberFromId(cfg.foxId);
   if (foxNumber == 0) {
-    return config.startupDelaySeconds;
+    return cfg.startupDelaySeconds;
   }
-  return static_cast<uint32_t>(foxNumber - 1) * config.transmitSeconds;
-}
-
-BeaconState stateAfterStartup() {
-  if (config.beaconMode) {
-    return BeaconState::ContinuousTransmit;
-  }
-  if (config.foxSyncEnabled && foxNumberFromId(config.foxId) != 0) {
-    return BeaconState::Transmitting;
-  }
-  return BeaconState::Idle;
+  return static_cast<uint32_t>(foxNumber - 1) * cfg.transmitSeconds;
 }
 
 uint32_t elapsedSince(uint32_t startedAt) {
   return millis() - startedAt;
+}
+
+// True once millis() has reached the given timestamp (wrap-safe).
+bool timeReached(uint32_t at) {
+  return static_cast<int32_t>(millis() - at) >= 0;
+}
+
+uint32_t cycleMs() {
+  return (config.transmitSeconds + config.idleSeconds) * 1000UL;
+}
+
+// Move nextTxAt forward by whole cycles until it is in the future. Keeps the
+// round-robin phase after a test transmission or a low-battery pause.
+void skipMissedSlots() {
+  while (static_cast<int32_t>(millis() - nextTxAt) > 0) {
+    nextTxAt += cycleMs();
+  }
+}
+
+void enterIdleAfter(uint32_t delayMs) {
+  nextTxAt = millis() + delayMs;
+  enterState(BeaconState::Idle);
+}
+
+// Called when the startup delay ends (or at boot when there is none).
+void finishStartup() {
+  if (config.beaconMode) {
+    enterState(BeaconState::ContinuousTransmit);
+  } else if (config.foxSyncEnabled && foxNumberFromId(config.foxId) != 0) {
+    enterIdleAfter(0);  // our slot starts now
+  } else {
+    enterIdleAfter(config.idleSeconds * 1000UL);
+  }
 }
 
 void setLed(bool on) {
@@ -295,22 +382,6 @@ void setPtt(bool active) {
   digitalWrite(PTT_PIN, outputHigh ? HIGH : LOW);
 }
 
-float readBatteryVoltage() {
-  if (!config.batteryEnabled) {
-    return 99.0f;
-  }
-
-  constexpr uint8_t samples = 12;
-  uint32_t totalMillivolts = 0;
-  for (uint8_t i = 0; i < samples; ++i) {
-    totalMillivolts += analogReadMilliVolts(BATTERY_PIN);
-    delay(3);
-  }
-
-  const float pinVoltage = (totalMillivolts / static_cast<float>(samples)) / 1000.0f;
-  return pinVoltage * config.batteryScale;
-}
-
 // Estimate state-of-charge (%) for a single-cell Li-ion battery from its
 // resting open-circuit voltage. The curve is a piecewise-linear fit to a
 // typical 18650 / LiPo discharge profile. For multi-cell packs the scaled
@@ -320,10 +391,7 @@ float readBatteryVoltage() {
 // Reference points (V -> %):
 //   4.20=100  4.10=90  4.00=80  3.90=70  3.80=55
 //   3.70=40   3.60=24  3.50=12  3.40=5   3.30=1  3.20=0
-uint8_t readBatteryPercent() {
-  if (!config.batteryEnabled) return 0;
-  const float v = readBatteryVoltage();
-
+uint8_t batteryPercentFromVoltage(float v) {
   static const struct { float v; uint8_t pct; } pts[] = {
     {4.20f, 100}, {4.10f, 90}, {4.00f, 80}, {3.90f, 70},
     {3.80f, 55},  {3.70f, 40}, {3.60f, 24}, {3.50f, 12},
@@ -342,6 +410,40 @@ uint8_t readBatteryPercent() {
     }
   }
   return 0;
+}
+
+// Average 12 ADC samples (~36 ms). Rate-limited so the main loop, display and
+// low-battery check do not hammer the ADC every iteration.
+void sampleBatteryIfDue() {
+  if (batteryCacheValid && elapsedSince(lastBatterySampleAt) < BATTERY_SAMPLE_INTERVAL_MS) {
+    return;
+  }
+  constexpr uint8_t samples = 12;
+  uint32_t totalMillivolts = 0;
+  for (uint8_t i = 0; i < samples; ++i) {
+    totalMillivolts += analogReadMilliVolts(BATTERY_PIN);
+    delay(3);
+  }
+  const float pinVoltage = (totalMillivolts / static_cast<float>(samples)) / 1000.0f;
+  const float voltage = pinVoltage * config.batteryScale;
+  batteryVoltageCache = voltage;
+  batteryPercentCache = batteryPercentFromVoltage(voltage);
+  lastBatterySampleAt = millis();
+  batteryCacheValid = true;
+}
+
+float readBatteryVoltage() {
+  if (!config.batteryEnabled) {
+    return 99.0f;
+  }
+  sampleBatteryIfDue();
+  return batteryVoltageCache;
+}
+
+uint8_t readBatteryPercent() {
+  if (!config.batteryEnabled) return 0;
+  sampleBatteryIfDue();
+  return batteryPercentCache;
 }
 
 bool isLowBattery() {
@@ -475,6 +577,7 @@ void loadDefaultConfig() {
 }
 
 void loadConfig() {
+  ConfigLock lock;
   loadDefaultConfig();
 
   preferences.begin("foxbeacon", true);
@@ -516,6 +619,7 @@ void loadConfig() {
   config.batteryScale = constrain(config.batteryScale, 1.0f, 10.0f);
   config.lowBatteryVoltage = constrain(config.lowBatteryVoltage, 2.5f, 15.0f);
   config.beaconIdIntervalSeconds = constrain(config.beaconIdIntervalSeconds, 10, 600);
+  config.wifiApTimeoutMinutes = constrain(config.wifiApTimeoutMinutes, 0, 1440);
 }
 
 void printConfig() {
@@ -531,7 +635,7 @@ void printConfig() {
     if (foxNumber > 0) {
       Serial.printf("                (fox sync: slot %u, starts at %lu s)\n",
                     foxNumber,
-                    static_cast<unsigned long>(resolvedStartupDelaySeconds()));
+                    static_cast<unsigned long>(resolvedStartupDelaySeconds(config)));
     } else {
       Serial.println(F("                (fox sync on but fox ID is not a standard ARDF ID)"));
     }
@@ -609,6 +713,103 @@ void enterState(BeaconState nextState) {
   lastLedToggleAt = millis();
 }
 
+// Start or stop the WiFi AP so it matches config.wifiApEnabled.
+void applyWifiState() {
+  if (config.wifiApEnabled && !webAdminIsRunning()) {
+    webAdminInit(AP_NAME_PREFIX);
+  } else if (!config.wifiApEnabled && webAdminIsRunning()) {
+    webAdminStop();
+  }
+}
+
+void restoreDefaults() {
+  {
+    ConfigLock lock;
+    loadDefaultConfig();
+  }
+  saveConfig();
+  batteryCacheValid = false;
+  applyWifiState();
+}
+
+void testPttOnly();
+void readSerialCommands();
+void checkButton();
+
+// Apply configuration changes and one-shot actions queued by other tasks
+// (web admin). Runs only from the main loop.
+void processQueuedRequests() {
+  bool haveConfig = false;
+  BeaconConfig next;
+  {
+    ConfigLock lock;
+    if (pendingConfigValid) {
+      next = pendingConfig;
+      pendingConfigValid = false;
+      haveConfig = true;
+    }
+  }
+  if (haveConfig) {
+    {
+      ConfigLock lock;
+      config = next;
+    }
+    saveConfig();
+    batteryCacheValid = false;
+    applyWifiState();
+    Serial.println(F("Web admin: settings saved."));
+  }
+
+  const uint8_t requests = pendingRequests.exchange(0);
+  if (requests & static_cast<uint8_t>(BeaconRequest::Defaults)) {
+    restoreDefaults();
+    Serial.println(F("Web admin: defaults restored."));
+  }
+  if (requests & static_cast<uint8_t>(BeaconRequest::Test)) {
+    forceTransmit = true;
+    Serial.println(F("Web admin: test transmission queued."));
+  }
+  if (requests & static_cast<uint8_t>(BeaconRequest::PttTest)) {
+    testPttOnly();
+  }
+  if (requests & static_cast<uint8_t>(BeaconRequest::Reboot)) {
+    rebootPending = true;
+    rebootRequestedAt = millis();
+  }
+  if (rebootPending && elapsedSince(rebootRequestedAt) >= REBOOT_DELAY_MS) {
+    Serial.println(F("Rebooting."));
+    Serial.flush();
+    setPtt(false);
+    ESP.restart();
+  }
+}
+
+// Background work that is safe while PTT is held with no audio (the steady
+// carrier part of a transmission and the gaps in continuous mode).
+void serviceBackgroundTasks() {
+  checkButton();
+  readSerialCommands();
+  webAdminLoop();
+  processQueuedRequests();
+  updateDisplay();
+}
+
+// Wait until untilMs while keeping the UI, web admin and serial responsive.
+// Slow display refreshes stop shortly before the deadline so the TX window
+// is not stretched.
+void waitWithService(uint32_t untilMs) {
+  while (static_cast<int32_t>(untilMs - millis()) > 0) {
+    const int32_t remaining = static_cast<int32_t>(untilMs - millis());
+    if (remaining > static_cast<int32_t>(TX_SERVICE_MARGIN_MS)) {
+      blinkLed(LED_TX_BLINK_MS);
+      serviceBackgroundTasks();
+      delay(5);
+    } else {
+      delay(1);
+    }
+  }
+}
+
 void transmitBeacon() {
   Serial.println(F("TX start"));
   const uint32_t transmissionEndsAt = millis() + (config.transmitSeconds * 1000UL);
@@ -624,23 +825,17 @@ void transmitBeacon() {
     sendWarbleUntil(audioEndsAt);
   } else {
     audioOff();
-    if (remainingAudioMs > 0) {
-      keyedDelay(static_cast<uint32_t>(remainingAudioMs));
-    }
   }
 
-  const int32_t remainingPttMs = static_cast<int32_t>(transmissionEndsAt - millis());
-  if (remainingPttMs > 0) {
-    keyedDelay(static_cast<uint32_t>(remainingPttMs));
-  }
+  // Steady carrier (or tail) until the TX window ends. Audio timing is no
+  // longer critical, so keep the display, button and web admin alive.
+  waitWithService(transmissionEndsAt);
+
   audioOff();
   setPtt(false);
   setLed(false);
   Serial.println(F("TX end"));
 }
-
-void readSerialCommands();
-void checkButton();
 
 void runContinuousBeacon() {
   Serial.println(F("Continuous beacon start"));
@@ -659,11 +854,8 @@ void runContinuousBeacon() {
       if (isLowBattery()) {
         break;
       }
-      checkButton();
       blinkLed(LED_TX_BLINK_MS);
-      readSerialCommands();
-      webAdminLoop();
-      updateDisplay();
+      serviceBackgroundTasks();
       if (forceTransmit) {
         forceTransmit = false;
         Serial.println(F("Beacon ID retransmission."));
@@ -683,7 +875,7 @@ void runContinuousBeacon() {
   setPtt(false);
   setLed(false);
   if (state == BeaconState::ContinuousTransmit && !config.beaconMode) {
-    enterState(BeaconState::Idle);
+    enterIdleAfter(config.idleSeconds * 1000UL);
   }
   Serial.println(F("Continuous beacon end"));
 }
@@ -713,10 +905,13 @@ bool parseBoolValue(const String &value, bool *out) {
   return false;
 }
 
-void handleSetCommand(String key, String value) {
+// Parse one "set <key> <value>" command into config. Returns false (and
+// prints usage) if the command was not understood.
+bool applySetCommand(String key, String value) {
   key.toLowerCase();
   value.trim();
 
+  ConfigLock lock;
   if (key == "call") {
     config.callSign = normalizeId(value);
   } else if (key == "fox") {
@@ -729,13 +924,13 @@ void handleSetCommand(String key, String value) {
       config.beaconMode = false;
     } else {
       Serial.println(F("Use: set mode fox|beacon"));
-      return;
+      return false;
     }
   } else if (key == "fox_sync") {
     bool parsed = false;
     if (!parseBoolValue(value, &parsed)) {
       Serial.println(F("Use: set fox_sync on|off"));
-      return;
+      return false;
     }
     config.foxSyncEnabled = parsed;
   } else if (key == "beacon_id") {
@@ -768,20 +963,20 @@ void handleSetCommand(String key, String value) {
       config.pttActiveLow = false;
     } else {
       Serial.println(F("Use: set ptt active_low|active_high"));
-      return;
+      return false;
     }
   } else if (key == "warble") {
     bool parsed = false;
     if (!parseBoolValue(value, &parsed)) {
       Serial.println(F("Use: set warble on|off"));
-      return;
+      return false;
     }
     config.warbleEnabled = parsed;
   } else if (key == "battery") {
     bool parsed = false;
     if (!parseBoolValue(value, &parsed)) {
       Serial.println(F("Use: set battery on|off"));
-      return;
+      return false;
     }
     config.batteryEnabled = parsed;
   } else if (key == "battery_scale") {
@@ -792,29 +987,32 @@ void handleSetCommand(String key, String value) {
     bool parsed = false;
     if (!parseBoolValue(value, &parsed)) {
       Serial.println(F("Use: set wifi_ap on|off"));
-      return;
+      return false;
     }
     config.wifiApEnabled = parsed;
-    if (parsed && !webAdminIsRunning()) {
-      webAdminInit("BricoHams-Fox");
-    } else if (!parsed && webAdminIsRunning()) {
-      webAdminStop();
-    }
   } else if (key == "wifi_ap_timeout") {
     config.wifiApTimeoutMinutes = constrain(value.toInt(), 0, 1440);
   } else if (key == "eco_mode") {
     bool parsed = false;
     if (!parseBoolValue(value, &parsed)) {
       Serial.println(F("Use: set eco_mode on|off"));
-      return;
+      return false;
     }
     config.displayEcoMode = parsed;
   } else {
     Serial.println(F("Unknown setting. Type show for command list."));
+    return false;
+  }
+  return true;
+}
+
+void handleSetCommand(const String &key, const String &value) {
+  if (!applySetCommand(key, value)) {
     return;
   }
-
   saveConfig();
+  batteryCacheValid = false;
+  applyWifiState();
   Serial.println(F("Saved."));
   printConfig();
 }
@@ -836,12 +1034,13 @@ void handleCommand(String command) {
   } else if (lower == "ptt_test") {
     testPttOnly();
   } else if (lower == "defaults") {
-    loadDefaultConfig();
-    saveConfig();
+    restoreDefaults();
     Serial.println(F("Compile-time defaults restored and saved."));
     printConfig();
   } else if (lower == "reboot") {
     Serial.println(F("Rebooting."));
+    Serial.flush();
+    setPtt(false);
     delay(100);
     ESP.restart();
   } else if (lower.startsWith("set ")) {
@@ -919,7 +1118,16 @@ void checkButton() {
 }
 
 void setup() {
+  configMutex = xSemaphoreCreateMutex();
+
+  // Load saved settings first so the PTT line is driven to the correct idle
+  // level for the saved polarity before the pin becomes an output. Otherwise
+  // an active-low interface would key the radio during boot.
+  loadConfig();
+  setPtt(false);
   pinMode(PTT_PIN, OUTPUT);
+  setPtt(false);
+
   pinMode(LED_PIN, OUTPUT);
 #ifdef BUTTON_PIN
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -928,43 +1136,41 @@ void setup() {
   button.attachLongPressStart(onLongPress);
   button.setPressMs(2000);  // long press = 2 seconds
 #endif
-  setPtt(false);
   setLed(false);
 
   Serial.begin(SERIAL_BAUD);
   delay(250);
 
-  loadConfig();
   displayInit(config.callSign.c_str(), FIRMWARE_VERSION);
   displayMode = DisplayMode::StartupScreen;
   displayModeEnteredAt = millis();
-  setPtt(false);
 
   ledcSetup(AUDIO_CHANNEL, config.cwToneHz, AUDIO_RESOLUTION_BITS);
   ledcAttachPin(AUDIO_PIN, AUDIO_CHANNEL);
   audioOff();
 
-  if (config.batteryEnabled) {
-    analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
-  }
+  // Full-scale ~3.1 V at the ADC pin. Set once so the battery monitor can be
+  // enabled later from serial, web or menu without a reboot.
+  analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
 
-  if (config.wifiApEnabled) {
-    webAdminInit("BricoHams-Fox");
-  }
+  applyWifiState();
 
   printConfig();
   Serial.println(F("Beacon armed."));
-  const uint32_t startupDelay = resolvedStartupDelaySeconds();
-  enterState(startupDelay > 0 ? BeaconState::StartupDelay
-                               : stateAfterStartup());
+  if (resolvedStartupDelaySeconds(config) > 0) {
+    enterState(BeaconState::StartupDelay);
+  } else {
+    finishStartup();
+  }
 }
 
 void loop() {
   readSerialCommands();
   checkButton();
   webAdminLoop();
+  processQueuedRequests();
 
-    if (config.beaconMode && state != BeaconState::StartupDelay &&
+  if (config.beaconMode && state != BeaconState::StartupDelay &&
       state != BeaconState::ContinuousTransmit && state != BeaconState::LowBatteryHalt) {
     enterState(BeaconState::ContinuousTransmit);
   }
@@ -978,30 +1184,46 @@ void loop() {
 
   if (forceTransmit && state != BeaconState::LowBatteryHalt && state != BeaconState::ContinuousTransmit) {
     forceTransmit = false;
+    const BeaconState resumeState = state;
+    const uint32_t resumeStartedAt = stateStartedAt;
+    enterState(BeaconState::Transmitting);
     transmitBeacon();
-    enterState(config.beaconMode ? BeaconState::ContinuousTransmit : BeaconState::Idle);
+    if (config.beaconMode) {
+      enterState(BeaconState::ContinuousTransmit);
+    } else if (resumeState == BeaconState::StartupDelay) {
+      // Keep counting the original startup delay so the fox slot is unchanged.
+      enterState(BeaconState::StartupDelay);
+      stateStartedAt = resumeStartedAt;
+    } else {
+      // Keep the scheduled slot; skip it only if the test overlapped it.
+      skipMissedSlots();
+      enterState(BeaconState::Idle);
+    }
   }
 
   switch (state) {
     case BeaconState::StartupDelay: {
       blinkLed(LED_IDLE_BLINK_MS);
-      const uint32_t startupDelay = resolvedStartupDelaySeconds();
+      const uint32_t startupDelay = resolvedStartupDelaySeconds(config);
       if (elapsedSince(stateStartedAt) >= startupDelay * 1000UL) {
-        enterState(stateAfterStartup());
+        finishStartup();
       }
       break;
     }
 
     case BeaconState::Idle:
       blinkLed(LED_IDLE_BLINK_MS);
-      if (elapsedSince(stateStartedAt) >= config.idleSeconds * 1000UL) {
+      if (timeReached(nextTxAt)) {
         enterState(BeaconState::Transmitting);
       }
       break;
 
     case BeaconState::Transmitting:
-      blinkLed(LED_TX_BLINK_MS);
+      // Advance from the ideal slot start, not from "now", so loop latency
+      // does not accumulate into slot drift across a long event.
+      nextTxAt += cycleMs();
       transmitBeacon();
+      skipMissedSlots();
       enterState(BeaconState::Idle);
       break;
 
@@ -1014,6 +1236,14 @@ void loop() {
 
     case BeaconState::LowBatteryHalt:
       blinkLed(LED_LOW_BATTERY_BLINK_MS);
+      // Resume when monitoring is disabled or the battery has clearly
+      // recovered (hysteresis avoids toggling around the cutoff).
+      if (!config.batteryEnabled ||
+          readBatteryVoltage() > config.lowBatteryVoltage + LOW_BATTERY_RECOVERY_HYSTERESIS_V) {
+        Serial.println(F("Battery OK, resuming."));
+        skipMissedSlots();
+        enterState(BeaconState::Idle);
+      }
       break;
   }
 

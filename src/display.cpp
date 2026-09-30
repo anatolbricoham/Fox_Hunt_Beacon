@@ -206,6 +206,29 @@ void displayClear() {
 TFT_eSPI tft = TFT_eSPI();
 static bool displayOn = true;
 
+// Last content drawn. A full-screen redraw flickers, so skip it when nothing
+// changed. Cleared whenever the screen is wiped for another reason.
+static String lastContent;
+
+// Layout scales with panel height: small panels (Heltec Wireless Tracker,
+// 160x80) use the small font and tighter rows so every line stays visible.
+struct TftLayout {
+  int headerH;
+  int headerFont;
+  int bodyFont;
+  int bodyTop;
+  int lineH;
+  int menuRowH;
+  int footerFont;
+};
+
+static TftLayout tftLayout() {
+  if (tft.height() < 120) {
+    return {18, 2, 1, 20, 10, 10, 1};
+  }
+  return {30, 4, 2, 36, 20, 22, 1};
+}
+
 static void tftPowerOn() {
 #ifdef TFT_VEXT_1_PIN
   pinMode(TFT_VEXT_1_PIN, OUTPUT);
@@ -258,21 +281,23 @@ void displayInit(const char *callsign, const char *version) {
 }
 
 void displayStartupScreen(const char *callsign, const char *version) {
+  const TftLayout l = tftLayout();
+  lastContent = "";
   tft.fillScreen(COLOR_BG);
   tft.setTextDatum(TL_DATUM);
 
   // Navy blue header bar with yellow text
-  tft.fillRect(0, 0, tft.width(), 30, COLOR_HEADER_BG);
+  tft.fillRect(0, 0, tft.width(), l.headerH, COLOR_HEADER_BG);
   tft.setTextColor(COLOR_HEADER_FG, COLOR_HEADER_BG);
   String header = String(callsign) + " Fox";
-  tft.drawString(header, 4, 4, 4);
+  tft.drawString(header, 4, 2, l.headerFont);
 
   // Body
   tft.setTextColor(FOX_CYAN, COLOR_BG);
   String ver = "v" + String(version);
-  tft.drawString(ver, 4, 40, 2);
+  tft.drawString(ver, 4, l.bodyTop, l.bodyFont);
   tft.setTextColor(FOX_ORANGE, COLOR_BG);
-  tft.drawString("Starting...", 4, 60, 2);
+  tft.drawString("Starting...", 4, l.bodyTop + l.lineH, l.bodyFont);
 }
 
 void displayUpdate(const char *callsign, const char *foxId,
@@ -280,6 +305,12 @@ void displayUpdate(const char *callsign, const char *foxId,
                    const char *timingStr, const char *batteryStr,
                    const char *ipStr) {
   if (!displayOn) return;
+  const String content = String("S|") + callsign + "|" + foxId + "|" + modeStr + "|" +
+                         stateStr + "|" + timingStr + "|" + batteryStr + "|" + ipStr;
+  if (content == lastContent) return;
+  lastContent = content;
+
+  const TftLayout l = tftLayout();
   tft.fillScreen(COLOR_BG);
   tft.setTextDatum(TL_DATUM);
 
@@ -287,79 +318,97 @@ void displayUpdate(const char *callsign, const char *foxId,
   tft.fillRect(0, 0, 2, tft.height(), stateAccentColor(stateStr));
 
   // Navy blue header bar with yellow callsign + fox ID
-  tft.fillRect(2, 0, tft.width() - 2, 30, COLOR_HEADER_BG);
+  tft.fillRect(2, 0, tft.width() - 2, l.headerH, COLOR_HEADER_BG);
   tft.setTextColor(COLOR_HEADER_FG, COLOR_HEADER_BG);
-  tft.drawString(String(callsign), 6, 4, 4);
-  tft.drawString(String(foxId), 90, 4, 4);
+  tft.drawString(String(callsign) + " " + foxId, 6, 2, l.headerFont);
+
+  int y = l.bodyTop;
 
   // Mode line (yellow accent)
   tft.setTextColor(FOX_YELLOW, COLOR_BG);
-  tft.drawString(String(modeStr), 4, 36, 2);
+  tft.drawString(String(modeStr), 4, y, l.bodyFont);
+  y += l.lineH;
 
   // State line (color-coded by state)
   tft.setTextColor(stateTextColor(stateStr), COLOR_BG);
-  tft.drawString(String(stateStr), 4, 56, 2);
+  tft.drawString(String(stateStr), 4, y, l.bodyFont);
+  y += l.lineH;
 
   // Timing line (cyan)
   tft.setTextColor(FOX_CYAN, COLOR_BG);
-  tft.drawString(String(timingStr), 4, 76, 2);
+  tft.drawString(String(timingStr), 4, y, l.bodyFont);
+  y += l.lineH;
 
   // Battery line (orange if present)
   if (batteryStr[0]) {
     tft.setTextColor(FOX_ORANGE, COLOR_BG);
-    tft.drawString(String(batteryStr), 4, 96, 2);
+    tft.drawString(String(batteryStr), 4, y, l.bodyFont);
+    y += l.lineH;
   }
 
   // IP line (green)
   if (ipStr[0]) {
     tft.setTextColor(FOX_GREEN, COLOR_BG);
-    tft.drawString(String(ipStr), 4, 116, 2);
+    tft.drawString(String(ipStr), 4, y, l.bodyFont);
   }
 }
 
 void displayMenu(int selectedIndex, int itemCount,
                  const char *const labels[], const char *const values[]) {
   if (!displayOn) return;
+  String content = String("M|") + selectedIndex;
+  for (int i = 0; i < itemCount; i++) {
+    content += "|";
+    content += values[i];
+  }
+  if (content == lastContent) return;
+  lastContent = content;
+
+  const TftLayout l = tftLayout();
   tft.fillScreen(COLOR_BG);
   tft.setTextDatum(TL_DATUM);
 
   // Navy blue header bar
-  tft.fillRect(0, 0, tft.width(), 30, COLOR_HEADER_BG);
+  tft.fillRect(0, 0, tft.width(), l.headerH, COLOR_HEADER_BG);
   tft.setTextColor(COLOR_HEADER_FG, COLOR_HEADER_BG);
-  tft.drawString("Settings", 4, 4, 4);
+  tft.drawString("Settings", 4, 2, l.headerFont);
 
-  tft.setTextColor(FOX_CYAN, COLOR_BG);
-
+  // Fit as many rows as the panel allows between header and footer, and
+  // scroll so the selected row is always visible.
+  const int footerY = tft.height() - (l.footerFont == 1 ? 10 : 16);
+  const int firstRowY = l.headerH + 6;
+  int visibleCount = (footerY - firstRowY) / l.menuRowH;
+  if (visibleCount < 1) visibleCount = 1;
+  if (visibleCount > itemCount) visibleCount = itemCount;
   int visibleStart = 0;
-  if (itemCount > 6 && selectedIndex > 4) {
-    visibleStart = selectedIndex - 4;
-    if (visibleStart > itemCount - 6) visibleStart = itemCount - 6;
+  if (selectedIndex >= visibleCount) {
+    visibleStart = selectedIndex - visibleCount + 1;
   }
-  int visibleCount = (itemCount < 6) ? itemCount : 6;
 
   for (int i = 0; i < visibleCount; i++) {
     int idx = visibleStart + i;
     if (idx >= itemCount) break;
-    int y = 40 + i * 22;
+    int y = firstRowY + i * l.menuRowH;
     if (idx == selectedIndex) {
       tft.setTextColor(FOX_YELLOW, COLOR_BG);
-      tft.drawString(">", 4, y, 2);
+      tft.drawString(">", 4, y, l.bodyFont);
     } else {
       tft.setTextColor(FOX_WHITE, COLOR_BG);
     }
     char line[32];
     snprintf(line, sizeof(line), "%-12s %s", labels[idx], values[idx]);
-    tft.drawString(line, 18, y, 2);
+    tft.drawString(line, 18, y, l.bodyFont);
     tft.setTextColor(FOX_WHITE, COLOR_BG);
   }
 
   // Footer hint (orange)
   tft.setTextColor(FOX_ORANGE, COLOR_BG);
-  tft.drawString("1=Next 2=Toggle Hold=Exit", 4, tft.height() - 16, 1);
+  tft.drawString("1=Next 2=Toggle Hold=Exit", 4, footerY, l.footerFont);
 }
 
 void displayAPMode(const char *ssid, const char *ip) {
   if (!displayOn) return;
+  lastContent = "";
   tft.fillScreen(COLOR_BG);
   tft.setTextDatum(TL_DATUM);
 
@@ -385,11 +434,13 @@ void displayPower(bool on) {
 #endif
   if (on) {
     tft.fillScreen(COLOR_BG);
+    lastContent = "";  // force a full redraw on wake
   }
 }
 
 void displayClear() {
   tft.fillScreen(COLOR_BG);
+  lastContent = "";
 }
 
 #elif DISPLAY_TYPE == 3
@@ -437,6 +488,10 @@ void displayClear() {
 
 static bool displayOn = true;
 static bool firstRefresh = true;
+
+// Last content drawn. E-Ink refreshes are slow (hundreds of ms) and wear the
+// panel, so only refresh when the text actually changes.
+static String lastContent;
 
 // Draw inverted header bar (black box with white text) — emulates navy blue
 // header on TFT. GxEPD2 uses BLACK as foreground; we fill a rect then write
@@ -505,6 +560,7 @@ static void einkInit() {
   eink.setTextColor(GxEPD_BLACK);
   eink.setTextSize(1);
   firstRefresh = true;
+  lastContent = "";
 }
 
 void displayInit(const char *callsign, const char *version) {
@@ -514,6 +570,7 @@ void displayInit(const char *callsign, const char *version) {
 }
 
 void displayStartupScreen(const char *callsign, const char *version) {
+  lastContent = "";
   eink.setFullWindow();
   eink.fillScreen(GxEPD_WHITE);
   char header[24];
@@ -532,6 +589,10 @@ void displayUpdate(const char *callsign, const char *foxId,
                    const char *timingStr, const char *batteryStr,
                    const char *ipStr) {
   if (!displayOn) return;
+  const String content = String("S|") + callsign + "|" + foxId + "|" + modeStr + "|" +
+                         stateStr + "|" + timingStr + "|" + batteryStr + "|" + ipStr;
+  if (content == lastContent) return;
+  lastContent = content;
   eink.setFullWindow();
   eink.fillScreen(GxEPD_WHITE);
 
@@ -577,6 +638,13 @@ void displayUpdate(const char *callsign, const char *foxId,
 void displayMenu(int selectedIndex, int itemCount,
                  const char *const labels[], const char *const values[]) {
   if (!displayOn) return;
+  String content = String("M|") + selectedIndex;
+  for (int i = 0; i < itemCount; i++) {
+    content += "|";
+    content += values[i];
+  }
+  if (content == lastContent) return;
+  lastContent = content;
   eink.setFullWindow();
   eink.fillScreen(GxEPD_WHITE);
   einkDrawHeader("Settings");
@@ -619,6 +687,7 @@ void displayMenu(int selectedIndex, int itemCount,
 
 void displayAPMode(const char *ssid, const char *ip) {
   if (!displayOn) return;
+  lastContent = "";
   eink.setFullWindow();
   eink.fillScreen(GxEPD_WHITE);
   einkDrawHeader("AP MODE");
@@ -655,6 +724,7 @@ void displayClear() {
   eink.setFullWindow();
   eink.fillScreen(GxEPD_WHITE);
   eink.display(false);
+  lastContent = "";
 }
 
 #else

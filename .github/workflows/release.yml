@@ -78,15 +78,19 @@ jobs:
       - name: Build ${{ matrix.env }}
         run: pio run -e ${{ matrix.env }}
 
+      # firmware-<env>.bin is the merged factory image (bootloader + partitions
+      # + boot_app0 + app) that the web flasher writes at offset 0.
+      # firmware-<env>-app.bin is the application only, for offset 0x10000.
       - name: Rename firmware artifact
         run: |
           mkdir -p release
-          cp .pio/build/${{ matrix.env }}/firmware.bin release/firmware-${{ matrix.env }}.bin
+          cp .pio/build/${{ matrix.env }}/firmware-merged.bin release/firmware-${{ matrix.env }}.bin
+          cp .pio/build/${{ matrix.env }}/firmware.bin release/firmware-${{ matrix.env }}-app.bin
 
       - uses: actions/upload-artifact@v5
         with:
           name: firmware-${{ matrix.env }}
-          path: release/firmware-${{ matrix.env }}.bin
+          path: release/firmware-${{ matrix.env }}*.bin
           if-no-files-found: error
           retention-days: 1
 

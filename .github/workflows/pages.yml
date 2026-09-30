@@ -7,6 +7,14 @@ on:
       - 'flasher/**'
       - 'flasher/.nojekyll'
       - '.github/workflows/pages.yml'
+  # Redeploy with the new binaries after a release. A release published by
+  # the Release Firmware workflow uses GITHUB_TOKEN, which does not trigger
+  # "release" events, so listen for that workflow finishing as well.
+  workflow_run:
+    workflows: [Release Firmware]
+    types: [completed]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -22,6 +30,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -95,6 +95,14 @@ Use `show` to confirm the active saved values.
 | Voltage reading is wrong | Adjust `battery_scale` after comparing with a multimeter. |
 | ESP32 browns out during TX | Radio current draw is pulling down the supply. Use separate supplies or a larger regulator. |
 | Battery cutoff does not happen | Confirm the divider is connected to the configured ADC pin and `set battery on` was saved. |
+| Beacon stays in LOWBAT | It resumes by itself once the voltage is 0.2 V above `low_battery`, or immediately after `set battery off`. Charge or swap the battery, or lower the cutoff. |
+
+## Web Flasher Problems
+
+| Symptom | Check |
+| --- | --- |
+| Board does not boot after flashing an old Release | Releases published before the merged-image fix contained only the application. Publish a new `v*` Release (it now contains the merged `firmware-<env>.bin`) or upload with PlatformIO. |
+| Flasher says no firmware is available | No GitHub Release exists yet, or the Pages deploy has not run since the Release. Run the "Deploy Web Flasher" workflow manually. |
 
 ## RF And Range Problems
 
