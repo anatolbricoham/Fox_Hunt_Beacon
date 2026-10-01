@@ -6,6 +6,8 @@
 #include "beacon_runtime.h"
 #include "display.h"
 #include "web_admin.h"
+#include "competition.h"
+#include "lora_network.h"
 
 constexpr uint8_t AUDIO_CHANNEL = 0;
 constexpr uint8_t AUDIO_RESOLUTION_BITS = 10;
@@ -567,6 +569,23 @@ void saveConfig() {
   preferences.putBool("wifiAp", config.wifiApEnabled);
   preferences.putUShort("wifiApTo", config.wifiApTimeoutMinutes);
   preferences.putBool("ecoDisp", config.displayEcoMode);
+  preferences.putBool("nfcEn", config.nfcEnabled);
+  preferences.putString("nfcTags", config.nfcAllowedTags);
+  preferences.putString("player", config.participantName);
+  preferences.putBool("mqttEn", config.mqttEnabled);
+  preferences.putString("wifiSta", config.wifiStationSsid);
+  preferences.putString("wifiPass", config.wifiStationPassword);
+  preferences.putString("mqttBroker", config.mqttBroker);
+  preferences.putUShort("mqttPort", config.mqttPort);
+  preferences.putString("mqttTopic", config.mqttTopic);
+  preferences.putString("mqttUser", config.mqttUser);
+  preferences.putString("mqttPass", config.mqttPassword);
+  preferences.putBool("loraEn", config.loraEnabled);
+  preferences.putBool("loraMaster", config.loraMasterMode);
+  preferences.putString("loraNode", config.loraNodeId);
+  preferences.putUInt("loraFreq", config.loraFrequencyHz);
+  preferences.putUShort("loraPower", static_cast<uint16_t>(config.loraTxPowerDbm));
+  preferences.putUShort("loraSync", config.loraSyncWord);
   preferences.end();
 }
 
@@ -604,6 +623,23 @@ void loadConfig() {
   config.wifiApEnabled = preferences.getBool("wifiAp", config.wifiApEnabled);
   config.wifiApTimeoutMinutes = preferences.getUShort("wifiApTo", config.wifiApTimeoutMinutes);
   config.displayEcoMode = preferences.getBool("ecoDisp", config.displayEcoMode);
+  config.nfcEnabled = preferences.getBool("nfcEn", config.nfcEnabled);
+  config.nfcAllowedTags = preferences.getString("nfcTags", config.nfcAllowedTags);
+  config.participantName = preferences.getString("player", config.participantName);
+  config.mqttEnabled = preferences.getBool("mqttEn", config.mqttEnabled);
+  config.wifiStationSsid = preferences.getString("wifiSta", config.wifiStationSsid);
+  config.wifiStationPassword = preferences.getString("wifiPass", config.wifiStationPassword);
+  config.mqttBroker = preferences.getString("mqttBroker", config.mqttBroker);
+  config.mqttPort = preferences.getUShort("mqttPort", config.mqttPort);
+  config.mqttTopic = preferences.getString("mqttTopic", config.mqttTopic);
+  config.mqttUser = preferences.getString("mqttUser", config.mqttUser);
+  config.mqttPassword = preferences.getString("mqttPass", config.mqttPassword);
+  config.loraEnabled = preferences.getBool("loraEn", config.loraEnabled);
+  config.loraMasterMode = preferences.getBool("loraMaster", config.loraMasterMode);
+  config.loraNodeId = preferences.getString("loraNode", config.loraNodeId);
+  config.loraFrequencyHz = preferences.getUInt("loraFreq", config.loraFrequencyHz);
+  config.loraTxPowerDbm = static_cast<int8_t>(preferences.getUShort("loraPower", static_cast<uint16_t>(config.loraTxPowerDbm)));
+  config.loraSyncWord = preferences.getUShort("loraSync", config.loraSyncWord);
   preferences.end();
 
   config.startupDelaySeconds = constrain(config.startupDelaySeconds, 0UL, 3600UL);
@@ -673,6 +709,25 @@ void printConfig() {
   }
   Serial.println();
   Serial.printf("Display eco:    %s\n", config.displayEcoMode ? "on" : "off");
+  Serial.printf("NFC:            %s\n", config.nfcEnabled ? "on" : "off");
+  if (config.nfcEnabled) {
+    Serial.printf("  whitelist:     %s\n", config.nfcAllowedTags.c_str());
+    Serial.printf("  participant:   %s\n", config.participantName.c_str());
+  }
+  Serial.printf("MQTT:           %s\n", config.mqttEnabled ? "on" : "off");
+  if (config.mqttEnabled) {
+    Serial.printf("  broker:        %s:%u\n", config.mqttBroker.c_str(), config.mqttPort);
+    Serial.printf("  topic:         %s\n", config.mqttTopic.c_str());
+    Serial.printf("  station SSID:  %s\n", config.wifiStationSsid.c_str());
+  }
+  Serial.printf("LoRa:           %s\n", config.loraEnabled ? "on" : "off");
+  if (config.loraEnabled) {
+    Serial.printf("  role:          %s\n", config.loraMasterMode ? "master" : "slave");
+    Serial.printf("  node:          %s\n", config.loraNodeId.c_str());
+    Serial.printf("  freq:          %lu Hz\n", static_cast<unsigned long>(config.loraFrequencyHz));
+    Serial.printf("  power:         %d dBm\n", config.loraTxPowerDbm);
+    Serial.printf("  sync word:     %u (0x%02X)\n", config.loraSyncWord, config.loraSyncWord);
+  }
   Serial.printf("Version:        %s\n", FIRMWARE_VERSION);
   Serial.println();
   Serial.println(F("Commands:"));
@@ -704,6 +759,23 @@ void printConfig() {
   Serial.println(F("  set wifi_ap on|off"));
   Serial.println(F("  set wifi_ap_timeout 10  (0=never)"));
   Serial.println(F("  set eco_mode on|off"));
+  Serial.println(F("  set nfc on|off"));
+  Serial.println(F("  set nfc_tags 04:2A:...;11:22:33:44"));
+  Serial.println(F("  set participant_name runner-01"));
+  Serial.println(F("  set mqtt on|off"));
+  Serial.println(F("  set mqtt_broker broker.local"));
+  Serial.println(F("  set mqtt_port 1883"));
+  Serial.println(F("  set mqtt_topic foxhunt/competition"));
+  Serial.println(F("  set wifi_ssid my-network"));
+  Serial.println(F("  set wifi_password my-password"));
+  Serial.println(F("  set mqtt_user user"));
+  Serial.println(F("  set mqtt_password secret"));
+  Serial.println(F("  set lora on|off"));
+  Serial.println(F("  set lora_role master|slave"));
+  Serial.println(F("  set lora_node node-01"));
+  Serial.println(F("  set lora_frequency 868100000"));
+  Serial.println(F("  set lora_power 20"));
+  Serial.println(F("  set lora_sync_word 18  (0-255, decimal)"));
   Serial.println();
 }
 
@@ -999,6 +1071,63 @@ bool applySetCommand(String key, String value) {
       return false;
     }
     config.displayEcoMode = parsed;
+  } else if (key == "nfc" || key == "nfc_enabled") {
+    bool parsed = false;
+    if (!parseBoolValue(value, &parsed)) {
+      Serial.println(F("Use: set nfc on|off"));
+      return false;
+    }
+    config.nfcEnabled = parsed;
+  } else if (key == "nfc_tags") {
+    config.nfcAllowedTags = value;
+  } else if (key == "participant_name") {
+    config.participantName = value;
+  } else if (key == "mqtt") {
+    bool parsed = false;
+    if (!parseBoolValue(value, &parsed)) {
+      Serial.println(F("Use: set mqtt on|off"));
+      return false;
+    }
+    config.mqttEnabled = parsed;
+  } else if (key == "mqtt_broker") {
+    config.mqttBroker = value;
+  } else if (key == "mqtt_port") {
+    config.mqttPort = constrain(value.toInt(), 1, 65535);
+  } else if (key == "mqtt_topic") {
+    config.mqttTopic = value;
+  } else if (key == "mqtt_user") {
+    config.mqttUser = value;
+  } else if (key == "mqtt_password") {
+    config.mqttPassword = value;
+  } else if (key == "wifi_ssid") {
+    config.wifiStationSsid = value;
+  } else if (key == "wifi_password") {
+    config.wifiStationPassword = value;
+  } else if (key == "lora") {
+    bool parsed = false;
+    if (!parseBoolValue(value, &parsed)) {
+      Serial.println(F("Use: set lora on|off"));
+      return false;
+    }
+    config.loraEnabled = parsed;
+  } else if (key == "lora_role") {
+    value.toLowerCase();
+    if (value == "master") {
+      config.loraMasterMode = true;
+    } else if (value == "slave") {
+      config.loraMasterMode = false;
+    } else {
+      Serial.println(F("Use: set lora_role master|slave"));
+      return false;
+    }
+  } else if (key == "lora_node") {
+    config.loraNodeId = value;
+  } else if (key == "lora_frequency") {
+    config.loraFrequencyHz = constrain(static_cast<uint32_t>(value.toInt()), 860000000UL, 930000000UL);
+  } else if (key == "lora_power") {
+    config.loraTxPowerDbm = constrain(value.toInt(), 2, 20);
+  } else if (key == "lora_sync_word") {
+    config.loraSyncWord = constrain(value.toInt(), 0, 255);
   } else {
     Serial.println(F("Unknown setting. Type show for command list."));
     return false;
@@ -1154,6 +1283,8 @@ void setup() {
   analogSetPinAttenuation(BATTERY_PIN, ADC_11db);
 
   applyWifiState();
+  loraNetworkInit();
+  competitionInit();
 
   printConfig();
   Serial.println(F("Beacon armed."));
@@ -1247,6 +1378,8 @@ void loop() {
       break;
   }
 
+  loraNetworkLoop();
+  competitionLoop();
   updateDisplay();
   delay(5);
 }

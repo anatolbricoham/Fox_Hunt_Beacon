@@ -6,10 +6,12 @@ The beacon can be configured in three ways:
 2. Use Serial Monitor commands after flashing.
 3. Use the web admin UI from a phone or laptop over WiFi.
 
-All three methods control the same settings. Serial Monitor and web UI settings
-are stored in ESP32 flash and override the compile-time defaults. Run `defaults`
-in Serial Monitor or click the Defaults button in the web UI to restore the
-values from `include/beacon_config.h`.
+The methods overlap but do not expose the same settings. The web UI covers the
+beacon controls, WiFi AP, display eco mode, and LoRa network settings. NFC and
+MQTT settings are currently available through compile-time defaults or Serial
+Monitor commands. Serial and web changes are stored in ESP32 flash and override
+compile-time defaults. Run `defaults` in Serial Monitor or click Defaults in the
+web UI to restore the values from `include/beacon_config.h`.
 
 The current single-beacon default is `MOE`; fox sync starts that slot without
 the extra 60-second delay used by `MOI`. Saved Preferences survive firmware
@@ -28,8 +30,10 @@ WiFi network named `BricoHams-Fox-XXXX` (last 4 hex of MAC address). Connect to 
 from a phone or laptop — the configuration page should auto-open. If it does
 not, browse to `http://10.0.0.8/`.
 
-The web UI provides forms for all settings, plus buttons for test transmission,
-PTT test, restore defaults, and reboot. No app or internet connection is needed.
+The web UI provides forms for beacon, WiFi AP, display eco mode, and LoRa
+settings, plus buttons for test transmission, PTT test, restore defaults, and
+reboot. NFC tag lists and MQTT broker credentials must be configured through
+Serial Monitor or compile-time defaults. No app or internet connection is needed.
 
 The web UI works on all ESP32 boards. Boards with OLED, TFT, or E-Ink screens
 also show status with callsign, fox ID, mode, state, timing, battery, and AP IP
@@ -131,6 +135,23 @@ after flashing if you want an existing beacon to adopt the current defaults.
 | `DEFAULT_BATTERY_ENABLED` | Enables low-battery cutoff. | `0` |
 | `DEFAULT_BATTERY_SCALE` | Battery divider multiplier. | `2.0` |
 | `DEFAULT_LOW_BATTERY_VOLTAGE` | Voltage where TX stops. | `3.40` |
+| `DEFAULT_NFC_ENABLED` | Enables NFC tag validation. | `0` |
+| `DEFAULT_NFC_TAG_WHITELIST` | Semicolon-separated allowed NFC UIDs; empty allows any UID. | `""` |
+| `DEFAULT_PARTICIPANT_NAME` | Participant label included in NFC events. | `competitor` |
+| `DEFAULT_MQTT_ENABLED` | Enables MQTT event publication. | `0` |
+| `DEFAULT_MQTT_BROKER` | MQTT broker hostname. | `broker.local` |
+| `DEFAULT_MQTT_PORT` | MQTT broker port. | `1883` |
+| `DEFAULT_MQTT_TOPIC` | Base topic for competition events. | `foxhunt/competition` |
+| `DEFAULT_WIFI_STATION_SSID` | Station network SSID used to reach the MQTT broker. | `""` |
+| `DEFAULT_WIFI_STATION_PASSWORD` | Station network password. | `""` |
+| `DEFAULT_MQTT_USER` | Optional MQTT username. | `""` |
+| `DEFAULT_MQTT_PASSWORD` | Optional MQTT password. | `""` |
+| `DEFAULT_LORA_ENABLED` | Enables the SX127x LoRa network. | `0` |
+| `DEFAULT_LORA_MASTER_MODE` | Selects master (`1`) or slave (`0`). | `0` |
+| `DEFAULT_LORA_FREQUENCY_HZ` | LoRa frequency in Hz. | `868100000` |
+| `DEFAULT_LORA_TX_POWER_DBM` | LoRa transmit power in dBm. | `20` |
+| `DEFAULT_LORA_SYNC_WORD` | Network sync word. | `0x12` |
+| `DEFAULT_LORA_NODE_ID` | Node ID included in LoRa packets. | `node-01` |
 
 Default pins for classic ESP32 boards:
 
@@ -181,9 +202,50 @@ Open Serial Monitor at 115200 baud and type commands followed by Enter.
 | `set wifi_ap on\|off` | Turn the WiFi AP and web admin UI on or off. |
 | `set wifi_ap_timeout <minutes>` | Auto-off the AP after this many idle minutes (0 = never). |
 | `set eco_mode on\|off` | Enable or disable display eco mode (screen off after 4 s). |
+| `set nfc on\|off` | Enable or disable NFC tag reading. |
+| `set nfc_tags <uid;uid>` | Set the allowed NFC UIDs; an empty list allows any UID. |
+| `set participant_name <name>` | Set the participant label sent with a validation event. |
+| `set mqtt on\|off` | Enable or disable MQTT publication. |
+| `set mqtt_broker <host>` | Set the MQTT broker hostname. |
+| `set mqtt_port <port>` | Set the MQTT broker port. |
+| `set mqtt_topic <topic>` | Set the base MQTT topic. Validated events use `<topic>/validated`. |
+| `set wifi_ssid <ssid>` | Set the WiFi station SSID used for MQTT connectivity. |
+| `set wifi_password <password>` | Set the WiFi station password. |
+| `set mqtt_user <user>` | Set the MQTT username. |
+| `set mqtt_password <password>` | Set the MQTT password. |
+| `set lora on\|off` | Enable or disable the LoRa network. |
+| `set lora_role master\|slave` | Set this node's network role. |
+| `set lora_node <id>` | Set this node's unique ID. |
+| `set lora_frequency <hz>` | Set the LoRa frequency in Hz (860-930 MHz). |
+| `set lora_power <dbm>` | Set transmit power (2-20 dBm). |
+| `set lora_sync_word <0-255>` | Set the network sync word in decimal; must match on all nodes. |
 
 The firmware constrains values to practical ranges. If a value is outside the
 allowed range, it is clipped to the nearest allowed value.
+
+## LoRa Network Settings
+
+Use the web admin's **LoRa Network** section or the serial commands below to
+configure the optional SX127x LoRa radio. Configure one node as master and the
+others as slaves; all nodes must use the same frequency and sync word. LoRa
+settings are saved immediately but the radio is initialized at boot, so reboot
+after changing them. Frequency and transmit power must comply with local
+regulations and the selected radio module's supported band.
+
+```text
+set lora on
+set lora_role master
+set lora_node master-01
+set lora_frequency 868100000
+set lora_power 20
+set lora_sync_word 18
+```
+
+The slave uses `set lora_role slave` and a unique node ID. Supported ranges are
+860-930 MHz, 2-20 dBm, and sync word 0-255. The default sync word is decimal 18
+(`0x12`). Confirm the board-specific LoRa SPI pins before connecting hardware.
+The master distributes network uptime, not UTC; absolute time and GPS/NTP
+integration are not implemented.
 
 ## Timing Examples
 

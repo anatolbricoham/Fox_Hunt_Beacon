@@ -2,7 +2,7 @@
 
 This is the complete PlatformIO board list for the BricoHams Fox Hunt Beacon. Choose the environment that matches the exact board and revision; a successful build does not prove that a GPIO is exposed or electrically safe on a particular revision.
 
-The firmware controls an external FM radio or transmitter through a PTT interface and audio input. It does not use the onboard LoRa radios on Heltec, LilyGO, or TTGO boards as an ARDF FM transmitter. Use an isolated transistor, MOSFET, or optocoupler interface for PTT; do not connect an unknown radio line directly to an ESP32 GPIO.
+The firmware controls an external FM radio or transmitter through a PTT interface and audio input. It does not use an onboard LoRa radio as an ARDF FM transmitter. Selected SX127x radios on classic Heltec WiFi LoRa 32, TTGO LoRa32, and T-Beam profiles can optionally carry competition NFC events; SX1262 boards and unconfigured radios are not supported for that network. See the [Competition Network Guide](competition-network.md) for supported pins and setup. Use an isolated transistor, MOSFET, or optocoupler interface for PTT; do not connect an unknown radio line directly to an ESP32 GPIO.
 
 ## Environments
 

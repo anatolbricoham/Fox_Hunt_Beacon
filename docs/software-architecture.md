@@ -7,8 +7,10 @@ This document describes the firmware from source to running beacon. It is for co
 | Path | Responsibility |
 | --- | --- |
 | `src/main.cpp` | Boot sequence, beacon state machine, Morse/audio generation, PTT, battery checks, serial commands, physical button, on-screen menu and the cross-task request queue. |
+| `src/competition.cpp`, `include/competition.h` | RC522 NFC validation, participant allowlist, MQTT publication, and a Preferences-backed offline MQTT queue. |
+| `src/lora_network.cpp`, `include/lora_network.h` | SX127x LoRa master/slave packets, network uptime sync, NFC event forwarding, ACK/retry handling, and duplicate suppression. |
 | `include/beacon_runtime.h` | Thread-safe interface between the main loop and the async web server task (config snapshot, queued config/actions, cached status). |
-| `include/beacon_config.h` | Compile-time defaults, fallback GPIOs, configuration structure, state enumeration and GPIO uniqueness checks. |
+| `include/beacon_config.h` | Compile-time defaults, fallback GPIOs, NFC/MQTT/LoRa configuration, state enumeration and GPIO uniqueness checks. |
 | `platformio.ini` | 32 board environments, shared board profiles, display buses, GPIO overrides, libraries and build flags. |
 | `src/display.cpp` | Display abstraction and OLED, TFT, E-Ink implementations; no-display builds compile to no-op functions. |
 | `include/display_config.h` | Display-type selection and fallback display flags. |
@@ -30,7 +32,8 @@ At reset, `setup()` in `src/main.cpp` performs these steps:
 4. Configure the LED and button, then start Serial at 115200 baud.
 5. Initialize the selected display, LEDC audio output and battery ADC attenuation.
 6. Start the Wi-Fi AP and web admin server when `wifiApEnabled` is true.
-7. Resolve the startup delay and enter `StartupDelay`, `Transmitting`, `Idle`, or `ContinuousTransmit` as appropriate.
+7. Initialize the SX127x LoRa radio when enabled, then initialize the NFC reader and MQTT client when competition settings require them.
+8. Print the active configuration and resolve the startup delay before entering `StartupDelay`, `Transmitting`, `Idle`, or `ContinuousTransmit` as appropriate.
 
 Compile-time defaults are only used when a preference key has not been saved. Use the serial `defaults` command or web Defaults action to replace saved preferences with the current compile-time defaults. A firmware upload alone does not erase or replace Preferences.
 
@@ -86,7 +89,24 @@ Configuration has three entry points:
 2. Serial commands use `handleCommand()` and `handleSetCommand()` in `src/main.cpp`.
 3. The web admin UI submits form fields to `POST /api/config` in `src/web_admin.cpp`.
 
-Serial and web updates are persisted with ESP32 Preferences. `GET /api/config` serializes current values and state for the browser UI. Numerical inputs are constrained and the callsign/fox ID are normalized (uppercase `A-Z`, `0-9`, `/`, `-`) before they are saved, whichever entry point is used. A POST only changes the fields it contains.
+Serial and web updates are persisted with ESP32 Preferences. `GET /api/config` serializes current values and state for the browser UI. Numerical inputs are constrained and the callsign/fox ID are normalized (uppercase `A-Z`, `0-9`, `/`, `-`) before they are saved, whichever entry point is used. A POST only changes the fields it contains. The web UI includes beacon, AP/display, and LoRa settings; NFC and MQTT broker settings currently use Serial Monitor or compile-time defaults.
+
+### Competition Event Flow
+
+An allowed RC522 tag read on a slave creates an NFC event for the configured
+participant. The slave queues an `EVT` packet with a random transaction ID and
+retries it up to five times until it receives a matching `ACK`. The master
+deduplicates recent events by sender and transaction ID, then hands the event
+to the MQTT publisher. MQTT events are either published to
+`<mqttTopic>/validated` or stored in Preferences for later delivery before the
+master acknowledges the LoRa event. A slave's short LoRa transmit queue is
+RAM-only and is discarded after retries fail.
+
+The master also broadcasts its seconds-since-boot counter every ten seconds.
+Slaves report synchronized network uptime for up to 30 seconds after the last
+valid sync packet. This is not Unix/UTC time; GPS and NTP are not implemented.
+The current protocol uses SX127x radios through the Sandeep Mistry LoRa library;
+SX1262 radios such as Heltec WiFi LoRa 32 V3 are not supported by this path.
 
 ### Threading
 
@@ -95,7 +115,7 @@ ESPAsyncWebServer runs its handlers in the AsyncTCP FreeRTOS task, not in `loop(
 - Only the main loop writes `config`, and it holds a mutex while doing so.
 - Web handlers read a copy with `beaconConfigSnapshot()`, build the new configuration and hand it over with `beaconQueueConfig()`.
 - Test, PTT test, defaults and reboot are queued with `beaconQueueRequest()`; the main loop runs them in `processQueuedRequests()`. Reboot waits 500 ms so the HTTP reply is delivered first.
-- Battery values shown on the web page come from the main loop's cached measurement, so the ADC is only accessed from one task. The web and serial controls expose callsign, fox ID, mode, fox sync, startup/TX/idle timing, CW, warble, PTT polarity and guards, battery, Wi-Fi AP timeout, and display eco mode.
+- Battery values shown on the web page come from the main loop's cached measurement, so the ADC is only accessed from one task. The web controls expose callsign, fox ID, mode, fox sync, startup/TX/idle timing, CW, warble, PTT polarity and guards, battery, Wi-Fi AP timeout, display eco mode, and LoRa settings. Serial additionally configures NFC allowlists and MQTT credentials/settings.
 
 Serial Monitor runs at 115200 baud. Common commands:
 

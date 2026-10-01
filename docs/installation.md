@@ -185,15 +185,17 @@ show
 
 After boot, look for a WiFi network named `BricoHams-Fox-XXXX` on your phone or
 laptop. Connect to it and browse to `http://10.0.0.8/` if the captive portal
-does not auto-open. The web UI has forms for all settings and buttons for test,
-PTT test, defaults, and reboot.
+does not auto-open. The web UI has forms for beacon, WiFi AP/display, and LoRa
+settings, plus buttons for test, PTT test, defaults, and reboot. Configure NFC
+and MQTT settings through Serial Monitor or compile-time defaults.
 
 **On-Screen Menu** (display boards only):
 
 Double-click the button on the status screen to open a quick settings menu with
 on/off toggles for WiFi AP, warble, fox sync, battery, mode, and display eco
-mode. Single-click to navigate, double-click to toggle, long-hold to exit. Full
-configuration still requires the web UI or serial monitor.
+mode. Single-click to navigate, double-click to toggle, long-hold to exit. The
+web UI covers beacon, AP/display, and LoRa settings. Full configuration,
+including NFC and MQTT, requires Serial Monitor.
 
 Settings are saved in ESP32 flash. To restore the values from
 `include/beacon_config.h`, type `defaults` in Serial Monitor or click the

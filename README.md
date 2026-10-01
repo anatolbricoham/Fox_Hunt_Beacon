@@ -133,21 +133,23 @@ Battery GPIO 34 <- resistor divider          <- battery (disabled by default)
 > Only connect 3.3 V logic to ESP32 GPIOs.
 
 The firmware can also drive an SA818/DRA818 FM module or a full amateur
-handheld through the same PTT and audio lines. It does **not** use the onboard
-LoRa radio on Heltec/LilyGO boards as an FM transmitter.
+handheld through the same PTT and audio lines. An onboard SX127x LoRa radio on
+supported Heltec/LilyGO boards can optionally carry competition NFC events; it
+is not an FM transmitter. SX1262 boards such as Heltec WiFi LoRa 32 V3 are not
+supported by the current LoRa driver.
 
 Wiring details: [Wiring Guide](docs/wiring.md). Full parts list with values:
 [Component Reference](docs/components.md).
 
 ## Configuration
 
-You can configure the beacon in three ways. All of them save to the same flash
-settings.
+You can configure the beacon in three ways. Serial and web changes are saved
+to flash; the web and on-screen interfaces expose a subset of all settings.
 
 | Method | Needs | Can change |
 | --- | --- | --- |
-| Web admin UI at `http://10.0.0.8/` | Phone or laptop on the beacon's WiFi | Everything, plus test, PTT test, defaults and reboot |
-| Serial Monitor, 115200 baud | USB cable | Everything |
+| Web admin UI at `http://10.0.0.8/` | Phone or laptop on the beacon's WiFi | Beacon controls, WiFi AP/display, LoRa; plus test, PTT test, defaults and reboot |
+| Serial Monitor, 115200 baud | USB cable | All settings, including NFC and MQTT |
 | On-screen menu | Board with a display | On/off toggles only |
 
 Common serial commands:
@@ -165,7 +167,9 @@ defaults             restore compile-time defaults
 ```
 
 For the full command list, value ranges, audio/PTT/battery setup and timing
-examples, see the [Configuration Guide](docs/configuration.md).
+examples, see the [Configuration Guide](docs/configuration.md). For NFC
+validation, LoRa master/slave operation and MQTT forwarding, see the
+[Competition Network Guide](docs/competition-network.md).
 
 **WiFi AP:** the AP has no password. It turns itself off after 10 minutes with
 no clients (`set wifi_ap_timeout 0` keeps it on). Re-enable it from the

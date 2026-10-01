@@ -46,6 +46,15 @@
 <div class="field"><label>AP auto-off (min)</label><input id="wifi_ap_timeout" type="number" min="0" max="1440"><small class="hint">0=never</small></div>
 <div class="field"><label>Display eco mode</label><select id="eco_mode"><option value="on">On</option><option value="off">Off</option></select></div>
 
+<h2>LoRa Network</h2>
+<div class="field"><label>LoRa radio</label><select id="lora"><option value="on">On</option><option value="off">Off</option></select></div>
+<div class="field"><label>Network role</label><select id="lora_role"><option value="master">Master</option><option value="slave">Slave</option></select></div>
+<div class="field"><label>Node ID</label><input id="lora_node" type="text" maxlength="24"></div>
+<div class="field"><label>Frequency (Hz)</label><input id="lora_frequency" type="number" min="860000000" max="930000000" step="100000"></div>
+<div class="field"><label>Transmit power (dBm)</label><input id="lora_power" type="number" min="2" max="20"></div>
+<div class="field"><label>Sync word (0-255)</label><input id="lora_sync" type="number" min="0" max="255"></div>
+<small class="hint">LoRa radio settings take effect after reboot. Use only frequencies and power allowed in your region.</small>
+
 <div class="btns">
 <button class="btn-save" onclick="save()">Save</button>
 <button class="btn-test" onclick="cmd('test')">Test TX</button>

@@ -1,10 +1,11 @@
 # Heltec Board Support
 
-This firmware can build for several popular Heltec ESP32 boards. Heltec boards
-with LoRa radios are supported as ESP32 controller boards for this project: the
-firmware still keys an external FM radio or transmitter module through PTT and
-audio wiring. It does not use the onboard SX127x/SX126x LoRa radio as an ARDF FM
-fox transmitter.
+This firmware can build for several popular Heltec ESP32 boards. The beacon
+still keys an external FM radio or transmitter module through PTT and audio
+wiring; an onboard LoRa radio is never used as an ARDF FM transmitter. The
+classic Heltec WiFi LoRa 32 and V2 profiles also configure their SX127x radios
+for the optional competition network. SX1262 and other unconfigured LoRa radios
+are not supported by that network driver.
 
 ## Supported PlatformIO Environments
 
@@ -15,18 +16,18 @@ Use these names with PlatformIO:
 | `heltec-wifi-kit-32` | `heltec_wifi_kit_32` | Original Heltec WiFi Kit 32. |
 | `heltec-wifi-kit-32-v2` | `heltec_wifi_kit_32_v2` | WiFi Kit 32 V2. |
 | `heltec-wifi-kit-32-v3` | `heltec_wifi_kit_32_V3` | ESP32-S3 WiFi Kit 32 V3. |
-| `heltec-wifi-lora-32` | `heltec_wifi_lora_32` | Original WiFi LoRa 32. Onboard LoRa is not used. |
-| `heltec-wifi-lora-32-v2` | `heltec_wifi_lora_32_V2` | WiFi LoRa 32 V2. Onboard LoRa is not used. |
-| `heltec-wifi-lora-32-v3` | `heltec_wifi_lora_32_V3` | ESP32-S3 WiFi LoRa 32 V3. Onboard LoRa is not used. |
-| `heltec-wireless-stick` | `heltec_wireless_stick` | Wireless Stick. Onboard LoRa is not used. |
-| `heltec-wireless-stick-lite` | `heltec_wireless_stick_lite` | Wireless Stick Lite. Onboard LoRa is not used. |
-| `heltec-wireless-stick-lite-v3` | `esp32-s3-devkitc-1` plus Heltec Arduino variant | Wireless Stick Lite V3 compatibility build. Onboard LoRa is not used. |
-| `heltec-wireless-tracker` | `esp32-s3-devkitc-1` compatibility build | Wireless Tracker (ESP32-S3, SX1262 LoRa, GNSS, 0.96" TFT ST7735 160x80). Onboard LoRa/GNSS not used. |
-| `heltec-vision-master-t190` | `esp32-s3-devkitc-1` compatibility build | Vision Master T190 (ESP32-S3, 1.9" TFT ST7789 170x320). Onboard LoRa not used. |
-| `heltec-wireless-paper` | `esp32-s3-devkitc-1` compatibility build | Wireless Paper (ESP32-S3, 2.13" E-Ink 250x122). Onboard LoRa not used. |
-| `heltec-vision-master-e213` | `esp32-s3-devkitc-1` compatibility build | Vision Master E213 (ESP32-S3, 2.13" E-Ink 250x122). Onboard LoRa not used. |
-| `heltec-vision-master-e290` | `esp32-s3-devkitc-1` compatibility build | Vision Master E290 (ESP32-S3, 2.9" E-Ink 296x128). Onboard LoRa not used. |
-| `heltec-capsule-sensor-v3` | `esp32-s3-devkitc-1` compatibility build | Capsule Sensor V3 (ESP32-S3, no display). Onboard LoRa not used. |
+| `heltec-wifi-lora-32` | `heltec_wifi_lora_32` | Original WiFi LoRa 32; onboard SX127x supports optional competition networking. |
+| `heltec-wifi-lora-32-v2` | `heltec_wifi_lora_32_V2` | WiFi LoRa 32 V2; onboard SX127x supports optional competition networking. |
+| `heltec-wifi-lora-32-v3` | `heltec_wifi_lora_32_V3` | ESP32-S3 WiFi LoRa 32 V3; onboard SX1262 is not supported by the current driver. |
+| `heltec-wireless-stick` | `heltec_wireless_stick` | Wireless Stick; onboard radio is not configured for competition networking. |
+| `heltec-wireless-stick-lite` | `heltec_wireless_stick_lite` | Wireless Stick Lite; onboard radio is not configured for competition networking. |
+| `heltec-wireless-stick-lite-v3` | `esp32-s3-devkitc-1` plus Heltec Arduino variant | Wireless Stick Lite V3 compatibility build; onboard radio is not configured for competition networking. |
+| `heltec-wireless-tracker` | `esp32-s3-devkitc-1` compatibility build | Wireless Tracker (ESP32-S3, SX1262 LoRa, GNSS, 0.96" TFT ST7735 160x80); SX1262/GNSS are not used. |
+| `heltec-vision-master-t190` | `esp32-s3-devkitc-1` compatibility build | Vision Master T190 (ESP32-S3, 1.9" TFT ST7789 170x320); onboard radio is not configured for competition networking. |
+| `heltec-wireless-paper` | `esp32-s3-devkitc-1` compatibility build | Wireless Paper (ESP32-S3, 2.13" E-Ink 250x122); onboard radio is not configured for competition networking. |
+| `heltec-vision-master-e213` | `esp32-s3-devkitc-1` compatibility build | Vision Master E213 (ESP32-S3, 2.13" E-Ink 250x122); onboard radio is not configured for competition networking. |
+| `heltec-vision-master-e290` | `esp32-s3-devkitc-1` compatibility build | Vision Master E290 (ESP32-S3, 2.9" E-Ink 296x128); onboard radio is not configured for competition networking. |
+| `heltec-capsule-sensor-v3` | `esp32-s3-devkitc-1` compatibility build | Capsule Sensor V3 (ESP32-S3, no display); onboard radio is not configured for competition networking. |
 
 Example build:
 

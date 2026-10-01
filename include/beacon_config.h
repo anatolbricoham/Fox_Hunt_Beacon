@@ -66,6 +66,65 @@
 // Wakes on any button press.
 #define DEFAULT_DISPLAY_ECO_MODE 1
 
+// NFC and MQTT competition mode. These are disabled by default and only take
+// effect when the optional hardware is installed and enabled in the config.
+#define DEFAULT_NFC_ENABLED 0
+#define DEFAULT_NFC_TAG_WHITELIST ""
+#define DEFAULT_MQTT_ENABLED 0
+#define DEFAULT_MQTT_BROKER "broker.local"
+#define DEFAULT_MQTT_PORT 1883
+#define DEFAULT_MQTT_TOPIC "foxhunt/competition"
+#define DEFAULT_WIFI_STATION_SSID ""
+#define DEFAULT_WIFI_STATION_PASSWORD ""
+#define DEFAULT_MQTT_USER ""
+#define DEFAULT_MQTT_PASSWORD ""
+#define DEFAULT_PARTICIPANT_NAME "competitor"
+
+// LoRa network for master/slave uptime sync and competition event relay.
+#define DEFAULT_LORA_ENABLED 0
+#define DEFAULT_LORA_MASTER_MODE 0
+#define DEFAULT_LORA_FREQUENCY_HZ 868100000UL
+#define DEFAULT_LORA_TX_POWER_DBM 20
+#define DEFAULT_LORA_SYNC_WORD 0x12
+#define DEFAULT_LORA_NODE_ID "node-01"
+
+// Default SPI pins for the optional RFID/NFC reader. Boards with displays may
+// override these values in platformio.ini to avoid pin conflicts.
+#ifndef NFC_SDA_PIN
+#define NFC_SDA_PIN 5
+#endif
+#ifndef NFC_RST_PIN
+#define NFC_RST_PIN 22
+#endif
+#ifndef NFC_SCK_PIN
+#define NFC_SCK_PIN 18
+#endif
+#ifndef NFC_MISO_PIN
+#define NFC_MISO_PIN 19
+#endif
+#ifndef NFC_MOSI_PIN
+#define NFC_MOSI_PIN 23
+#endif
+
+#ifndef LORA_CS_PIN
+#define LORA_CS_PIN 16
+#endif
+#ifndef LORA_RST_PIN
+#define LORA_RST_PIN 17
+#endif
+#ifndef LORA_DIO0_PIN
+#define LORA_DIO0_PIN 21
+#endif
+#ifndef LORA_SCK_PIN
+#define LORA_SCK_PIN NFC_SCK_PIN
+#endif
+#ifndef LORA_MISO_PIN
+#define LORA_MISO_PIN NFC_MISO_PIN
+#endif
+#ifndef LORA_MOSI_PIN
+#define LORA_MOSI_PIN NFC_MOSI_PIN
+#endif
+
 // Default pins for classic ESP32 DevKit-style boards. Some board environments
 // override these in platformio.ini.
 #ifndef PTT_PIN
@@ -120,6 +179,26 @@ struct BeaconConfig {
   bool wifiApEnabled = true;       // WiFi AP + web admin UI on/off
   uint16_t wifiApTimeoutMinutes = 10; // Auto-off AP after N minutes of no activity (0 = never)
   bool displayEcoMode = DEFAULT_DISPLAY_ECO_MODE;     // Turn off display after inactivity
+
+  // Competition mode for NFC validation and MQTT reporting.
+  bool nfcEnabled = DEFAULT_NFC_ENABLED;
+  String nfcAllowedTags = DEFAULT_NFC_TAG_WHITELIST;
+  String participantName = DEFAULT_PARTICIPANT_NAME;
+  bool mqttEnabled = DEFAULT_MQTT_ENABLED;
+  String wifiStationSsid = DEFAULT_WIFI_STATION_SSID;
+  String wifiStationPassword = DEFAULT_WIFI_STATION_PASSWORD;
+  String mqttBroker = DEFAULT_MQTT_BROKER;
+  uint16_t mqttPort = DEFAULT_MQTT_PORT;
+  String mqttTopic = DEFAULT_MQTT_TOPIC;
+  String mqttUser = DEFAULT_MQTT_USER;
+  String mqttPassword = DEFAULT_MQTT_PASSWORD;
+
+  bool loraEnabled = DEFAULT_LORA_ENABLED;
+  bool loraMasterMode = DEFAULT_LORA_MASTER_MODE;
+  String loraNodeId = DEFAULT_LORA_NODE_ID;
+  uint32_t loraFrequencyHz = DEFAULT_LORA_FREQUENCY_HZ;
+  int8_t loraTxPowerDbm = DEFAULT_LORA_TX_POWER_DBM;
+  uint8_t loraSyncWord = DEFAULT_LORA_SYNC_WORD;
 };
 
 // Beacon state machine states.

@@ -5,8 +5,10 @@ LilyGO boards with LoRa, GNSS, displays, touch controllers, or battery charger
 hardware can be used as ESP32 controllers for this project. The supported TFT
 and OLED profiles use the onboard display for status and menu output. The
 firmware still keys an external FM radio or transmitter module through PTT and
-audio wiring; it does not use onboard LoRa as an ARDF FM transmitter or read
-GNSS position/time. Touch controllers are not currently used.
+audio wiring; onboard LoRa is not an ARDF FM transmitter. The SX127x radios on
+TTGO LoRa32 V1/V2/V2.1 and T-Beam can optionally carry competition events.
+Other onboard LoRa/GNSS hardware is not configured for this network, and GNSS
+position/time is not currently read. Touch controllers are not currently used.
 
 ## Supported PlatformIO Environments
 
@@ -16,11 +18,11 @@ Use these names with PlatformIO:
 | --- | --- | --- |
 | `lilygo-t-display` | `lilygo-t-display` | Original ESP32 T-Display with ST7789 status/menu display. |
 | `lilygo-t-display-s3` | `lilygo-t-display-s3` | ESP32-S3 T-Display with ST7789 status/menu display. |
-| `lilygo-t3-s3` | `lilygo-t3-s3` | ESP32-S3 LoRa board. Onboard LoRa is not used. |
-| `ttgo-lora32-v1` | `ttgo-lora32-v1` | TTGO LoRa32 V1; OLED is used for status/menu, onboard LoRa is not used. |
-| `ttgo-lora32-v2` | `ttgo-lora32-v2` | TTGO LoRa32 V2; OLED is used for status/menu, onboard LoRa is not used. |
-| `ttgo-lora32-v21` | `ttgo-lora32-v21` | TTGO LoRa32 v2.1.6; OLED is used for status/menu, onboard LoRa is not used. |
-| `ttgo-t-beam` | `ttgo-t-beam` | TTGO T-Beam; OLED is used for status/menu, onboard LoRa/GNSS are not used. |
+| `lilygo-t3-s3` | `lilygo-t3-s3` | ESP32-S3 LoRa board; onboard LoRa is not configured for competition networking. |
+| `ttgo-lora32-v1` | `ttgo-lora32-v1` | TTGO LoRa32 V1; OLED status/menu and onboard SX127x competition networking are supported. |
+| `ttgo-lora32-v2` | `ttgo-lora32-v2` | TTGO LoRa32 V2; OLED status/menu and onboard SX127x competition networking are supported. |
+| `ttgo-lora32-v21` | `ttgo-lora32-v21` | TTGO LoRa32 v2.1.6; OLED status/menu and onboard SX127x competition networking are supported. |
+| `ttgo-t-beam` | `ttgo-t-beam` | TTGO T-Beam; OLED status/menu and onboard SX127x competition networking are supported; GNSS is not used. |
 | `ttgo-t-oi-plus` | `ttgo-t-oi-plus` | ESP32-C3 T-OI Plus. Fewer GPIO pins than classic ESP32 boards. |
 | `ttgo-t-watch` | `ttgo-t-watch` | T-Watch with ST7789 status/menu display; touch and watch sensors are not used. |
 | `ttgo-t1` | `ttgo-t1` | TTGO T1 ESP32 board. |

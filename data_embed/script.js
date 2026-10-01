@@ -19,6 +19,10 @@ function loadConfig(){
     setSel('wifi_ap',c.wifiAp?'on':'off');
     set('wifi_ap_timeout',c.wifiApTimeout);
     setSel('eco_mode',c.ecoMode?'on':'off');
+    setSel('lora',c.loraEnabled?'on':'off');
+    setSel('lora_role',c.loraMaster?'master':'slave');
+    set('lora_node',c.loraNode);set('lora_frequency',c.loraFrequency);
+    set('lora_power',c.loraPower);set('lora_sync',c.loraSync);
     var bat=c.batteryEnabled?c.battery+' V ('+c.batteryPct+'%)':'off';
     var s='<b>State:</b> <span>'+c.state+'</span> | <b>Battery:</b> <span>'+bat+'</span>';
     if(c.foxSync&&!c.beaconMode&&c.foxNum>0)s+=' | <b>Slot:</b> <span>'+c.foxNum+'</span> (start '+c.startupResolved+'s)';
@@ -38,6 +42,8 @@ function save(){
   d.append('ptt',val('ptt'));d.append('lead',val('lead'));d.append('tail',val('tail'));
   d.append('battery',val('battery'));d.append('battery_scale',val('battery_scale'));d.append('low_battery',val('low_battery'));
   d.append('wifi_ap',val('wifi_ap'));d.append('wifi_ap_timeout',val('wifi_ap_timeout'));d.append('eco_mode',val('eco_mode'));
+  d.append('lora',val('lora'));d.append('lora_role',val('lora_role'));d.append('lora_node',val('lora_node'));
+  d.append('lora_frequency',val('lora_frequency'));d.append('lora_power',val('lora_power'));d.append('lora_sync',val('lora_sync'));
   fetch('/api/config',{method:'POST',body:d}).then(r=>r.text()).then(t=>{msg(t,true);setTimeout(loadConfig,500)}).catch(e=>msg('Save failed: '+e,false));
 }
 

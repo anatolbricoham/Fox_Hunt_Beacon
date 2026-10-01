@@ -119,6 +119,12 @@ static void handleGetConfig(AsyncWebServerRequest *request) {
   json += "\"wifiAp\":" + String(c.wifiApEnabled ? "true" : "false") + ",";
   json += "\"wifiApTimeout\":" + String(c.wifiApTimeoutMinutes) + ",";
   json += "\"ecoMode\":" + String(c.displayEcoMode ? "true" : "false") + ",";
+  json += "\"loraEnabled\":" + String(c.loraEnabled ? "true" : "false") + ",";
+  json += "\"loraMaster\":" + String(c.loraMasterMode ? "true" : "false") + ",";
+  json += "\"loraNode\":" + jsonString(c.loraNodeId) + ",";
+  json += "\"loraFrequency\":" + String(c.loraFrequencyHz) + ",";
+  json += "\"loraPower\":" + String(c.loraTxPowerDbm) + ",";
+  json += "\"loraSync\":" + String(c.loraSyncWord) + ",";
   json += "\"state\":\"" + stateName(beaconStateValue()) + "\",";
   if (c.batteryEnabled) {
     json += "\"battery\":\"" + String(beaconBatteryVoltage(), 2) + "\",";
@@ -184,6 +190,13 @@ static void handlePostConfig(AsyncWebServerRequest *request) {
 
   if (has("eco_mode")) next.displayEcoMode = isOnValue(param("eco_mode"));
 
+  if (has("lora")) next.loraEnabled = isOnValue(param("lora"));
+  if (has("lora_role")) next.loraMasterMode = (param("lora_role") == "master");
+  if (has("lora_node")) next.loraNodeId = param("lora_node").substring(0, 24);
+  if (has("lora_frequency")) next.loraFrequencyHz = constrain(static_cast<uint32_t>(param("lora_frequency").toInt()), 860000000UL, 930000000UL);
+  if (has("lora_power")) next.loraTxPowerDbm = constrain(param("lora_power").toInt(), 2, 20);
+  if (has("lora_sync")) next.loraSyncWord = constrain(param("lora_sync").toInt(), 0, 255);
+
   beaconQueueConfig(next);
   request->send(200, "text/plain", "Saved. Settings apply now; timing changes take effect from the next cycle.");
 }
@@ -244,7 +257,8 @@ void webAdminInit(const char *apNamePrefix) {
            (uint8_t)(mac >> 8), (uint8_t)mac);
   apSsid = String(apNamePrefix) + "-" + macSuffix;
 
-  WiFi.mode(WIFI_AP);
+  const bool useStation = config.mqttEnabled && !config.wifiStationSsid.isEmpty();
+  WiFi.mode(useStation ? WIFI_AP_STA : WIFI_AP);
   WiFi.softAPConfig(IPAddress(10, 0, 0, 8), IPAddress(10, 0, 0, 8), IPAddress(255, 255, 255, 0));
   WiFi.softAP(apSsid.c_str());
   apIp = WiFi.softAPIP().toString();
